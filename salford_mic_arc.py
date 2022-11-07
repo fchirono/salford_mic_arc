@@ -140,7 +140,7 @@ class DSRawTimeSeries:
 
         # read data from HDF5 file, save as attribute
         for ch_name in other_ch_names:
-            data = h5file[ch_name][:]
+            data = h5file[ch_name][:, 1]
             setattr(self, ch_name, data)
 
 
