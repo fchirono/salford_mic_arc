@@ -147,9 +147,9 @@ class DSRawTimeSeries:
     # **********************************************************************
     def filter_data(self, filter_order=3, fc=50, btype='highpass'):
         """
-        Filter time-domain data at given filter order, cutoff frequency(ies),
-        filter type, and overwrite result over original data. Uses Butterworth
-        filter topology, and applies fwd-bkwd filtering.
+        Filter time-domain microphone data at given filter order, cutoff
+        frequency(ies), filter type, and overwrite result over original data.
+        Uses Butterworth filter topology, and applies fwd-bkwd filtering.
         """
 
         my_filter = ss.butter(filter_order, fc, btype,

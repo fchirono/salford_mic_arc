@@ -39,7 +39,7 @@ class MultiChannelPSD:
         #   (N_mics, Ndft//2+1)-shape array_like
         self.psd = np.atleast_2d(psd)
 
-        self.N_ch = self.psd.shape[0]
+        self.N_mics = self.psd.shape[0]
 
         # frequency vector (single-sided)
         #   (Ndft//2+1,)-shape array_like
@@ -97,110 +97,6 @@ class MultiChannelPSD:
 
         for ch in range(self.N_ch):
             self.psd_broadband[ch, :] = ss.medfilt(self.psd[ch, :], kernel_size)
-
-
-    # ************************************************************************
-    def find_bpf_peaks(self, bpf, N_peaks=10, dB_above_broadband=0,
-                       radius=10, units='points'):
-        """
-        Finds peaks in PSD for first 'N_peaks' Blade Passing Frequency
-        harmonics, with 'bpf' being the nominal BPF in Hz. Optional arguments
-        are the height above PSD broadband component as threshold, and maximum
-        search radius around nominal frequency.
-
-        Parameters
-        ----------
-        bpf : float
-            Nominal Blade Passing Frequency, in Hz.
-
-        N_peaks = int, optional
-            Number of peaks to search for. Default is 10.
-
-        dB_above_broadband : float, optional
-            Minimum peak height above broadband PSD component, in decibels.
-
-        radius : int or float, optional
-            Search radius around nominal frequency, in points (int) or Hz
-            (float). Default is 10 points.
-
-        units : {'points', 'Hz'}, optional
-            Units for peak search radius. Default is 'points'.
-
-
-        Returns
-        -------
-        'bpf_peaks' : (N_ch, N_peaks)-shape array_like
-            Indices of BPF peaks.
-
-        'bpf_peak_lims' : (N_ch, N_peaks, 2)-shape array_like
-            Lower and upper indices determining the width of each peak.
-            Defined as the points where the peak in raw PSD crosses the PSD
-            broadband component.
-        """
-
-        # assert instance has psd broadband defined
-        assert hasattr(self, 'psd_broadband'), \
-            "Cannot find peaks: PSD instance does not have 'psd_broadband' attribute defined!"
-
-
-        assert units in ['points', 'Hz'], "Unknown input for 'units' - must be 'points' or 'Hz' !"
-
-        # if kernel size is given in Hz, calculate equivalent length in points
-        if units == 'Hz':
-            radius_Hz = np.copy(radius)
-            radius = round_to_nearest_odd(radius_Hz/self.df)
-
-
-        self.bpf = bpf
-
-        gain_above_broadband = 10**(dB_above_broadband/10)
-
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-        # get indices for nominal BPF and harmonics
-        #   --> n=0 is BPF, n=1 is 2*BPF, etc...
-
-        self.bpf_peaks = np.zeros((self.N_ch, N_peaks), dtype=int)
-
-        for n_pk in range(N_peaks):
-            bpf_index = np.argmin(np.abs(self.freq - (n_pk+1)*self.bpf))
-
-            search_range = np.arange(bpf_index - radius,
-                                     bpf_index + radius + 1)
-
-            for ch in range(self.N_ch):
-                height_range = (self.psd_broadband[ch, search_range]
-                                * gain_above_broadband,
-                                None)
-
-                peak_index, peak_properties = ss.find_peaks(self.psd[ch, search_range],
-                                                            height=height_range)
-
-                # ------------------------------------------------------------
-                # process peak finding results
-
-                try:
-                    # if multiple peaks found, get tallest peak
-                    n_tallest = np.argmax(peak_properties['peak_heights'])
-
-                # if no peaks found, write "-1" as error condition
-                except ValueError:
-                    self.bpf_peaks[ch, n_pk] = -1
-
-                # if tallest peak was found, store result and continue
-                else:
-                    self.bpf_peaks[ch, n_pk] = peak_index[n_tallest] + search_range[0]
-
-                # ------------------------------------------------------------
-
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-        # find peak limits (for integrating BPF and harmonics' levels)
-
-        # self.find_bpf_peak_lims()
-        self.bpf_peak_lims = self.find_peak_lims(self.bpf_peaks)
-
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-
-        return self.bpf_peaks, self.bpf_peak_lims
 
 
     def find_all_peaks(self, f_low, f_high, dB_above_broadband=3):
@@ -487,50 +383,6 @@ class MultiChannelPSD:
         return self.all_peaks_SPL
 
 
-    def calc_bpf_SPL(self):
-        """
-        Returns array of BPF harmonics' levels per channel, in dB re 20 uPa
-        RMS.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        bpf_SPL : (N_ch, N_harms)-shape array_like
-            Array of integrated BPF harmonics' SPL per channel, in dB re 20 uPa
-            RMS.
-
-        Notes
-        -----
-        Indices are zero-based, but BPF harmonics are one-based: index 0
-        represents 1xBPF, index 1 represents 2xBPF, etc.
-        """
-
-        assert hasattr(self, 'bpf_peak_lims'), "Attribute 'bpf_peak_lims' not found!"
-
-        N_harms = self.bpf_peaks.shape[1]
-
-        self.bpf_SPL = np.zeros((self.N_ch, N_harms))
-
-        for ch in range(self.N_ch):
-            for n_harm in range(N_harms):
-                bpf_harm_range = np.arange(self.bpf_peak_lims[ch, n_harm, 0],
-                                           self.bpf_peak_lims[ch, n_harm, 1]+1)
-
-                # # subtract broadband content from PSD peak
-                # bpf_minus_bb = (self.psd[ch, bpf_harm_range]
-                #                 - self.psd_broadband[ch, bpf_harm_range])
-                # integrated_bpf_psd = np.sum(bpf_minus_bb)*self.df
-
-                integrated_bpf_psd = np.sum(self.psd[ch, bpf_harm_range])*self.df
-
-                self.bpf_SPL[ch, n_harm] = 10*np.log10(integrated_bpf_psd/(P_REF**2))
-
-        return self.bpf_SPL
-
-
     def calc_tonal_SPL(self):
         """
         Returns the tonal SPL per channel, as the sum of all tonal (BPF
@@ -585,570 +437,570 @@ class MultiChannelPSD:
 # ##########################################################################
 
 
-class MultiFilePSDs:
-    """
-    Class to store post-processed frequency-domain power spectral density data
-    from multiple files, collected over a list of azimuthal angles.
-    """
+# class MultiFilePSDs:
+#     """
+#     Class to store post-processed frequency-domain power spectral density data
+#     from multiple files, collected over a list of azimuthal angles.
+#     """
 
-    def __init__(self, filenames, N_blades, azim_angles, nominal_rpm,
-                 Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP, window=DEFAULT_WINDOW):
+#     def __init__(self, filenames, N_blades, azim_angles, nominal_rpm,
+#                  Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP, window=DEFAULT_WINDOW):
 
-        self.filenames = filenames
+#         self.filenames = filenames
 
-        self.N_blades = N_blades
+#         self.N_blades = N_blades
 
-        self.azim_angles = azim_angles
-        self.N_azim = len(azim_angles)
+#         self.azim_angles = azim_angles
+#         self.N_azim = len(azim_angles)
 
-        self.nominal_rpm = nominal_rpm
+#         self.nominal_rpm = nominal_rpm
 
-        assert len(self.filenames) == self.N_azim, "Number of elements in 'filenames' and 'azim_angles' does not match!"
+#         assert len(self.filenames) == self.N_azim, "Number of elements in 'filenames' and 'azim_angles' does not match!"
 
-        self.Ndft = Ndft
-        self.window = window
-        self.Noverlap = Noverlap
+#         self.Ndft = Ndft
+#         self.window = window
+#         self.Noverlap = Noverlap
 
-        self.thrust_azim = np.zeros(self.N_azim)
-        self.temp_azim = np.zeros(self.N_azim)
-        self.rpm_azim = np.zeros(self.N_azim)
-        self.bpf_azim = np.zeros(self.N_azim)
+#         self.thrust_azim = np.zeros(self.N_azim)
+#         self.temp_azim = np.zeros(self.N_azim)
+#         self.rpm_azim = np.zeros(self.N_azim)
+#         self.bpf_azim = np.zeros(self.N_azim)
 
-        self.calc_azim_PSDs(Ndft, window, Noverlap)
+#         self.calc_azim_PSDs(Ndft, window, Noverlap)
 
 
-    def calc_azim_PSDs(self, Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP,
-                       window=DEFAULT_WINDOW):
-        """
-        Calculates PSDs for all files in list of file names.
-        """
+#     def calc_azim_PSDs(self, Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP,
+#                        window=DEFAULT_WINDOW):
+#         """
+#         Calculates PSDs for all files in list of file names.
+#         """
 
-        # create list of 'MultiChannelPSD' objects
-        self.azim_PSDs = []
+#         # create list of 'MultiChannelPSD' objects
+#         self.azim_PSDs = []
 
-        # calculate PSDs from remaining files
-        for az in range(self.N_azim):
+#         # calculate PSDs from remaining files
+#         for az in range(self.N_azim):
 
-            ds_data = ds_mic_arc.DSRawTimeSeries(self.filenames[az],
-                                                 self.N_blades)
+#             ds_data = ds_mic_arc.DSRawTimeSeries(self.filenames[az],
+#                                                  self.N_blades)
 
-            self.azim_PSDs.append(ds_data.calc_PSDs(Ndft, window, Noverlap))
+#             self.azim_PSDs.append(ds_data.calc_PSDs(Ndft, window, Noverlap))
 
-            if hasattr(ds_data, 'avg_rpm'):
-                # If time-domain data has attr 'avg_rpm', use that
-                self.rpm_azim[az] = ds_data.avg_rpm
-            else:
-                # if not, get nominal RPM and use it to estimate RPM and BPF
-                # from f_shaft peak in acoustic data
+#             if hasattr(ds_data, 'avg_rpm'):
+#                 # If time-domain data has attr 'avg_rpm', use that
+#                 self.rpm_azim[az] = ds_data.avg_rpm
+#             else:
+#                 # if not, get nominal RPM and use it to estimate RPM and BPF
+#                 # from f_shaft peak in acoustic data
 
-                f_shaft_approx = self.nominal_rpm/60
-                f_shaft = ds_data.estimate_peak_freq(f_shaft_approx - 20,
-                                                     f_shaft_approx + 20,
-                                                     Ndft=2**14)
-                self.rpm_azim[az] = f_shaft*60
-                self.bpf_azim[az] = f_shaft*self.N_blades
+#                 f_shaft_approx = self.nominal_rpm/60
+#                 f_shaft = ds_data.estimate_peak_freq(f_shaft_approx - 20,
+#                                                      f_shaft_approx + 20,
+#                                                      Ndft=2**14)
+#                 self.rpm_azim[az] = f_shaft*60
+#                 self.bpf_azim[az] = f_shaft*self.N_blades
 
-            if hasattr(ds_data, 'avg_thrust'):
-                self.thrust_azim[az] = ds_data.avg_thrust
+#             if hasattr(ds_data, 'avg_thrust'):
+#                 self.thrust_azim[az] = ds_data.avg_thrust
 
-            if hasattr(ds_data, 'avg_temp'):
-                self.temp_azim[az] = ds_data.avg_temp
+#             if hasattr(ds_data, 'avg_temp'):
+#                 self.temp_azim[az] = ds_data.avg_temp
 
-            if hasattr(ds_data, 'avg_bpf'):
-                self.bpf_azim[az] = ds_data.avg_bpf
+#             if hasattr(ds_data, 'avg_bpf'):
+#                 self.bpf_azim[az] = ds_data.avg_bpf
 
-        # brings some metadata to current namespace
-        self.N_ch = (self.azim_PSDs[0].psd).shape[0]
-        self.fs = self.azim_PSDs[0].fs
-        self.df = self.azim_PSDs[0].df
-        self.freq = self.azim_PSDs[0].freq
+#         # brings some metadata to current namespace
+#         self.N_ch = (self.azim_PSDs[0].psd).shape[0]
+#         self.fs = self.azim_PSDs[0].fs
+#         self.df = self.azim_PSDs[0].df
+#         self.freq = self.azim_PSDs[0].freq
 
 
 
-    def calc_broadband_SPL(self, f_low, f_high, f_type='Hz'):
-        """
-        Calculates the broadband SPL within a frequency band ['f_low', 'f_high']
-        by integrating the broadband PSDs within this band. Results are returned
-        in dB re 20 uPa RMS.
+#     def calc_broadband_SPL(self, f_low, f_high, f_type='Hz'):
+#         """
+#         Calculates the broadband SPL within a frequency band ['f_low', 'f_high']
+#         by integrating the broadband PSDs within this band. Results are returned
+#         in dB re 20 uPa RMS.
 
 
-        Parameters
-        ----------
-        f_low : float
-            Low frequency limit, in Hz.
+#         Parameters
+#         ----------
+#         f_low : float
+#             Low frequency limit, in Hz.
 
-        f_high : float
-            High frequency limit, in Hz.
+#         f_high : float
+#             High frequency limit, in Hz.
 
-        'f_type' : {'Hz', 'f_shaft'}, optional
-            String determining whether 'f_low', 'f_high' are absolute
-            frequencies in Hz or ratios of the shaft frequency. Default is 'Hz'
+#         'f_type' : {'Hz', 'f_shaft'}, optional
+#             String determining whether 'f_low', 'f_high' are absolute
+#             frequencies in Hz or ratios of the shaft frequency. Default is 'Hz'
 
 
-        Returns
-        -------
-        broadband_SPL : (N_azim, N_ch)-shape array_like
-            Integrated broadband SPL per azimuth/file, per channel, in dB re
-            20 uPa RMS, within the frequency band [f_low, f_high].
-        """
+#         Returns
+#         -------
+#         broadband_SPL : (N_azim, N_ch)-shape array_like
+#             Integrated broadband SPL per azimuth/file, per channel, in dB re
+#             20 uPa RMS, within the frequency band [f_low, f_high].
+#         """
 
-        assert f_type in ['Hz', 'f_shaft'], \
-            "Input argument 'f_type' must be either 'Hz' or 'f_shaft' !"
+#         assert f_type in ['Hz', 'f_shaft'], \
+#             "Input argument 'f_type' must be either 'Hz' or 'f_shaft' !"
 
-        self.broadband_SPL = np.zeros((self.N_azim, self.N_ch))
+#         self.broadband_SPL = np.zeros((self.N_azim, self.N_ch))
 
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-        if f_type == 'Hz':
+#         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+#         if f_type == 'Hz':
 
-            for az in range(self.N_azim):
-                self.azim_PSDs[az].calc_broadband_PSD()
-                self.broadband_SPL[az, :] = self.azim_PSDs[az].calc_broadband_SPL(f_low, f_high)
+#             for az in range(self.N_azim):
+#                 self.azim_PSDs[az].calc_broadband_PSD()
+#                 self.broadband_SPL[az, :] = self.azim_PSDs[az].calc_broadband_SPL(f_low, f_high)
 
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-        elif f_type == 'f_shaft':
-            for az in range(self.N_azim):
+#         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+#         elif f_type == 'f_shaft':
+#             for az in range(self.N_azim):
 
-                f_shaft = self.rpm_azim[az]/60
+#                 f_shaft = self.rpm_azim[az]/60
 
-                self.azim_PSDs[az].calc_broadband_PSD()
-                self.broadband_SPL[az, :] = self.azim_PSDs[az].calc_broadband_SPL(f_low*f_shaft, f_high*f_shaft)
+#                 self.azim_PSDs[az].calc_broadband_PSD()
+#                 self.broadband_SPL[az, :] = self.azim_PSDs[az].calc_broadband_SPL(f_low*f_shaft, f_high*f_shaft)
 
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+#         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
 
-        return self.broadband_SPL
+#         return self.broadband_SPL
 
 
-    def calc_oa_SPL(self, f_low, f_high, f_type='Hz'):
-        """
-        Calculates the overall SPL within a frequency band ['f_low', 'f_high']
-        by integrating the PSDs within this band. Results are returned
-        in dB re 20 uPa RMS.
+#     def calc_oa_SPL(self, f_low, f_high, f_type='Hz'):
+#         """
+#         Calculates the overall SPL within a frequency band ['f_low', 'f_high']
+#         by integrating the PSDs within this band. Results are returned
+#         in dB re 20 uPa RMS.
 
-        Parameters
-        ----------
-        f_low : float
-            Low frequency limit, in Hz.
+#         Parameters
+#         ----------
+#         f_low : float
+#             Low frequency limit, in Hz.
 
-        f_high : float
-            High frequency limit, in Hz.
+#         f_high : float
+#             High frequency limit, in Hz.
 
-        'f_type' : {'Hz', 'f_shaft'}
-            String determining whether 'f_low', 'f_high' are absolute
-            frequencies in Hz or ratios of the shaft frequency.
+#         'f_type' : {'Hz', 'f_shaft'}
+#             String determining whether 'f_low', 'f_high' are absolute
+#             frequencies in Hz or ratios of the shaft frequency.
 
-        Returns
-        -------
-        oa_SPL : (N_azim, N_ch)-shape array_like
-            Integrated overall SPL per azimuth/file, per channel, in dB re 20
-            uPa RMS, within the frequency band [f_low, f_high].
+#         Returns
+#         -------
+#         oa_SPL : (N_azim, N_ch)-shape array_like
+#             Integrated overall SPL per azimuth/file, per channel, in dB re 20
+#             uPa RMS, within the frequency band [f_low, f_high].
 
-        """
+#         """
 
-        assert f_type in ['Hz', 'f_shaft'], \
-            "Input argument 'f_type' must be either 'Hz' or 'f_shaft' !"
+#         assert f_type in ['Hz', 'f_shaft'], \
+#             "Input argument 'f_type' must be either 'Hz' or 'f_shaft' !"
 
-        self.oa_SPL = np.zeros((self.N_azim, self.N_ch))
+#         self.oa_SPL = np.zeros((self.N_azim, self.N_ch))
 
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-        if f_type == 'Hz':
+#         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+#         if f_type == 'Hz':
 
-            for az in range(self.N_azim):
-                self.oa_SPL[az, :] = self.azim_PSDs[az].calc_oa_SPL(f_low, f_high)
+#             for az in range(self.N_azim):
+#                 self.oa_SPL[az, :] = self.azim_PSDs[az].calc_oa_SPL(f_low, f_high)
 
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-        elif f_type == 'f_shaft':
-            for az in range(self.N_azim):
+#         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+#         elif f_type == 'f_shaft':
+#             for az in range(self.N_azim):
 
-                f_shaft = self.rpm_azim[az]/60
-                self.oa_SPL[az, :] = self.azim_PSDs[az].calc_oa_SPL(f_low*f_shaft, f_high*f_shaft)
+#                 f_shaft = self.rpm_azim[az]/60
+#                 self.oa_SPL[az, :] = self.azim_PSDs[az].calc_oa_SPL(f_low*f_shaft, f_high*f_shaft)
 
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+#         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
 
-        return self.oa_SPL
+#         return self.oa_SPL
 
 
-    def find_bpf_peaks(self, N_peaks=10, dB_above_broadband=0, radius=10,
-                       units='points'):
-        """
-        Finds peaks in PSDs for first 'N_peaks' Blade Passing Frequency
-        harmonics, with attribute 'bpf' being the nominal BPF in Hz. Optional
-        arguments are the height above PSD broadband component as threshold,
-        and maximum search radius around nominal frequency.
+#     def find_bpf_peaks(self, N_peaks=10, dB_above_broadband=0, radius=10,
+#                        units='points'):
+#         """
+#         Finds peaks in PSDs for first 'N_peaks' Blade Passing Frequency
+#         harmonics, with attribute 'bpf' being the nominal BPF in Hz. Optional
+#         arguments are the height above PSD broadband component as threshold,
+#         and maximum search radius around nominal frequency.
 
-        Parameters
-        ----------
-        N_peaks = int, optional
-            Number of peaks to search for. Default is 10.
+#         Parameters
+#         ----------
+#         N_peaks = int, optional
+#             Number of peaks to search for. Default is 10.
 
-        dB_above_broadband : float, optional
-            Minimum peak height above broadband PSD component, in decibels.
+#         dB_above_broadband : float, optional
+#             Minimum peak height above broadband PSD component, in decibels.
 
-        radius : int or float, optional
-            Search radius around nominal frequency, in points (int) or Hz
-            (float). Default is 10 points.
+#         radius : int or float, optional
+#             Search radius around nominal frequency, in points (int) or Hz
+#             (float). Default is 10 points.
 
-        units : {'points', 'Hz'}, optional
-            Units for peak search radius. Default is 'points'.
+#         units : {'points', 'Hz'}, optional
+#             Units for peak search radius. Default is 'points'.
 
 
-        Returns
-        -------
-        'bpf_peaks' : (N_azim, N_ch, N_peaks)-shape array_like
-            Indices of BPF peaks.
+#         Returns
+#         -------
+#         'bpf_peaks' : (N_azim, N_ch, N_peaks)-shape array_like
+#             Indices of BPF peaks.
 
-        'bpf_peak_lims' : (N_azim, N_ch, N_peaks, 2)-shape array_like
-            Lower and upper indices determining the width of each peak.
-            Defined as the points where the peak in raw PSD crosses the PSD
-            broadband component.
-        """
+#         'bpf_peak_lims' : (N_azim, N_ch, N_peaks, 2)-shape array_like
+#             Lower and upper indices determining the width of each peak.
+#             Defined as the points where the peak in raw PSD crosses the PSD
+#             broadband component.
+#         """
 
-        assert units in ['points', 'Hz'], "Unknown input for 'units' - must be 'points' or 'Hz' !"
+#         assert units in ['points', 'Hz'], "Unknown input for 'units' - must be 'points' or 'Hz' !"
 
-        # if kernel size is given in Hz, calculate equivalent length in points
-        if units == 'Hz':
-            radius_Hz = np.copy(radius)
-            radius = round_to_nearest_odd(radius_Hz/self.df)
+#         # if kernel size is given in Hz, calculate equivalent length in points
+#         if units == 'Hz':
+#             radius_Hz = np.copy(radius)
+#             radius = round_to_nearest_odd(radius_Hz/self.df)
 
 
-        self.bpf_peaks = np.zeros((self.N_azim, self.N_ch, N_peaks),
-                                  dtype=int)
-        self.bpf_peak_lims = np.zeros((self.N_azim, self.N_ch, N_peaks, 2),
-                                      dtype=int)
+#         self.bpf_peaks = np.zeros((self.N_azim, self.N_ch, N_peaks),
+#                                   dtype=int)
+#         self.bpf_peak_lims = np.zeros((self.N_azim, self.N_ch, N_peaks, 2),
+#                                       dtype=int)
 
-        for az in range(self.N_azim):
-            self.azim_PSDs[az].find_bpf_peaks(self.bpf_azim[az], N_peaks,
-                                              dB_above_broadband, radius, units)
+#         for az in range(self.N_azim):
+#             self.azim_PSDs[az].find_bpf_peaks(self.bpf_azim[az], N_peaks,
+#                                               dB_above_broadband, radius, units)
 
-            self.bpf_peaks[az, :, :] = self.azim_PSDs[az].bpf_peaks
-            self.bpf_peak_lims[az, :, :, :] = self.azim_PSDs[az].bpf_peak_lims
+#             self.bpf_peaks[az, :, :] = self.azim_PSDs[az].bpf_peaks
+#             self.bpf_peak_lims[az, :, :, :] = self.azim_PSDs[az].bpf_peak_lims
 
-        return self.bpf_peaks, self.bpf_peak_lims
+#         return self.bpf_peaks, self.bpf_peak_lims
 
 
-    def find_all_peaks(self, f_low, f_high, dB_above_broadband=3):
-        """
-        Finds all peaks in PSD spectrum within a bandwidth [f_low, f_high]. Peaks
-        are not restricted to be at the BPF harmonics. Optional arguments are the
-        height above PSD broadband component as threshold.
+#     def find_all_peaks(self, f_low, f_high, dB_above_broadband=3):
+#         """
+#         Finds all peaks in PSD spectrum within a bandwidth [f_low, f_high]. Peaks
+#         are not restricted to be at the BPF harmonics. Optional arguments are the
+#         height above PSD broadband component as threshold.
 
-        Parameters
-        ----------
-        f_low : float
-            Low frequency limit, in Hz.
+#         Parameters
+#         ----------
+#         f_low : float
+#             Low frequency limit, in Hz.
 
-        f_high : float
-            High frequency limit, in Hz.
+#         f_high : float
+#             High frequency limit, in Hz.
 
-        dB_above_broadband : float, optional
-            Minimum peak height above broadband PSD component, in decibels. Default
-            value is 3 dB.
+#         dB_above_broadband : float, optional
+#             Minimum peak height above broadband PSD component, in decibels. Default
+#             value is 3 dB.
 
 
-        Returns
-        -------
-        'all_peaks' : (N_azim, N_ch, N_peaks)-shape array_like
-            Indices of all peaks above threshold.
+#         Returns
+#         -------
+#         'all_peaks' : (N_azim, N_ch, N_peaks)-shape array_like
+#             Indices of all peaks above threshold.
 
-        'all_peak_lims' : (N_azim, N_ch, N_peaks, 2)-shape array_like
-            Lower and upper indices determining the width of each peak.
-            Defined as the points where the peak in raw PSD crosses the PSD
-            broadband component.
-        """
+#         'all_peak_lims' : (N_azim, N_ch, N_peaks, 2)-shape array_like
+#             Lower and upper indices determining the width of each peak.
+#             Defined as the points where the peak in raw PSD crosses the PSD
+#             broadband component.
+#         """
 
-        N_peaks_max = 0
+#         N_peaks_max = 0
 
-        self.all_peaks = np.zeros((self.N_azim, self.N_ch, self.Ndft//2+1),
-                                  dtype=int)
-        self.all_peak_lims = np.zeros((self.N_azim, self.N_ch, self.Ndft//2+1, 2),
-                                      dtype=int)
+#         self.all_peaks = np.zeros((self.N_azim, self.N_ch, self.Ndft//2+1),
+#                                   dtype=int)
+#         self.all_peak_lims = np.zeros((self.N_azim, self.N_ch, self.Ndft//2+1, 2),
+#                                       dtype=int)
 
-        for az in range(self.N_azim):
-            self.azim_PSDs[az].find_all_peaks(f_low, f_high, dB_above_broadband)
+#         for az in range(self.N_azim):
+#             self.azim_PSDs[az].find_all_peaks(f_low, f_high, dB_above_broadband)
 
-            N_peaks = self.azim_PSDs[az].all_peaks.shape[1]
+#             N_peaks = self.azim_PSDs[az].all_peaks.shape[1]
 
-            self.all_peaks[az, :, :N_peaks] = self.azim_PSDs[az].all_peaks
-            self.all_peak_lims[az, :, :N_peaks, :] = self.azim_PSDs[az].all_peak_lims
+#             self.all_peaks[az, :, :N_peaks] = self.azim_PSDs[az].all_peaks
+#             self.all_peak_lims[az, :, :N_peaks, :] = self.azim_PSDs[az].all_peak_lims
 
-            N_peaks_max = np.max([N_peaks_max, N_peaks])
+#             N_peaks_max = np.max([N_peaks_max, N_peaks])
 
-        # change size of 'all_peaks' to largest no. of peaks found
-        temp_allpeaks = np.copy(self.all_peaks[:, :, :N_peaks_max])
-        self.all_peaks = np.copy(temp_allpeaks)
+#         # change size of 'all_peaks' to largest no. of peaks found
+#         temp_allpeaks = np.copy(self.all_peaks[:, :, :N_peaks_max])
+#         self.all_peaks = np.copy(temp_allpeaks)
 
-        # change size of 'all_peaks' to largest no. of peaks found
-        temp_allpeak_lims = np.copy(self.all_peak_lims[:, :, :N_peaks_max, :])
-        self.all_peak_lims = np.copy(temp_allpeak_lims)
+#         # change size of 'all_peaks' to largest no. of peaks found
+#         temp_allpeak_lims = np.copy(self.all_peak_lims[:, :, :N_peaks_max, :])
+#         self.all_peak_lims = np.copy(temp_allpeak_lims)
 
-        return self.all_peaks, self.all_peak_lims
+#         return self.all_peaks, self.all_peak_lims
 
 
-    def calc_bpf_SPL(self):
-        """
-        Returns an array of BPF harmonics' levels per azimuth/file, per
-        channel, in dB re 20 uPa RMS.
+#     def calc_bpf_SPL(self):
+#         """
+#         Returns an array of BPF harmonics' levels per azimuth/file, per
+#         channel, in dB re 20 uPa RMS.
 
 
-        Parameters
-        ----------
-        None
+#         Parameters
+#         ----------
+#         None
 
-        Returns
-        -------
-        bpf_SPL : (N_azim, N_ch, N_harms)-shape array_like
-            Array of integrated BPF harmonics' SPL per azimuth/file, per
-            channel, in dB re 20 uPa RMS.
+#         Returns
+#         -------
+#         bpf_SPL : (N_azim, N_ch, N_harms)-shape array_like
+#             Array of integrated BPF harmonics' SPL per azimuth/file, per
+#             channel, in dB re 20 uPa RMS.
 
-        Notes
-        -----
-        Indices are zero-based, but BPF harmonics are one-based: index 0
-        represents 1xBPF, index 1 represents 2xBPF, etc.
-        """
+#         Notes
+#         -----
+#         Indices are zero-based, but BPF harmonics are one-based: index 0
+#         represents 1xBPF, index 1 represents 2xBPF, etc.
+#         """
 
-        N_harms = self.bpf_peaks.shape[2]
+#         N_harms = self.bpf_peaks.shape[2]
 
-        self.bpf_SPL = np.zeros((self.N_azim, self.N_ch, N_harms))
+#         self.bpf_SPL = np.zeros((self.N_azim, self.N_ch, N_harms))
 
-        for az in range(self.N_azim):
+#         for az in range(self.N_azim):
 
-            self.bpf_SPL[az, :, :] = self.azim_PSDs[az].calc_bpf_SPL()
+#             self.bpf_SPL[az, :, :] = self.azim_PSDs[az].calc_bpf_SPL()
 
-        return self.bpf_SPL
+#         return self.bpf_SPL
 
 
-    def calc_all_peaks_SPL(self):
-        """
-        Returns an array of all tones' levels per azimuth/file, per
-        channel, in dB re 20 uPa RMS.
+#     def calc_all_peaks_SPL(self):
+#         """
+#         Returns an array of all tones' levels per azimuth/file, per
+#         channel, in dB re 20 uPa RMS.
 
 
-        Parameters
-        ----------
-        None
+#         Parameters
+#         ----------
+#         None
 
-        Returns
-        -------
-        all_peaks_SPL : (N_azim, N_ch, N_peaks)-shape array_like
-            Array of integrated tones' SPL per azimuth/file, per channel, in
-            dB re 20 uPa RMS.
+#         Returns
+#         -------
+#         all_peaks_SPL : (N_azim, N_ch, N_peaks)-shape array_like
+#             Array of integrated tones' SPL per azimuth/file, per channel, in
+#             dB re 20 uPa RMS.
 
-        Notes
-        -----
-        Number of tones can vary per channel and azimuth/file.
-        """
+#         Notes
+#         -----
+#         Number of tones can vary per channel and azimuth/file.
+#         """
 
-        N_peaks = self.all_peaks.shape[2]
+#         N_peaks = self.all_peaks.shape[2]
 
-        self.all_peaks_SPL = np.zeros((self.N_azim, self.N_ch, N_peaks))
+#         self.all_peaks_SPL = np.zeros((self.N_azim, self.N_ch, N_peaks))
 
-        for az in range(self.N_azim):
+#         for az in range(self.N_azim):
 
-            self.all_peaks_SPL[az, :, :] = self.azim_PSDs[az].calc_all_peaks_SPL()
+#             self.all_peaks_SPL[az, :, :] = self.azim_PSDs[az].calc_all_peaks_SPL()
 
-        return self.all_peaks_SPL
+#         return self.all_peaks_SPL
 
 
-    def calc_tonal_SPL(self):
-        """
-        Returns the tonal SPL per azimuth/file, per channel, as the sum of all
-        tones (BPF harmonics or other peaks) SPLs.
+#     def calc_tonal_SPL(self):
+#         """
+#         Returns the tonal SPL per azimuth/file, per channel, as the sum of all
+#         tones (BPF harmonics or other peaks) SPLs.
 
-        Parameters
-        ----------
-        None
+#         Parameters
+#         ----------
+#         None
 
-        Returns
-        -------
-        tonal_SPL : (N_azim, N_ch)-shape array_like
-            Array of integrated BPF harmonics' SPL per azimuth/file, per
-            channel, in dB re 20 uPa RMS.
+#         Returns
+#         -------
+#         tonal_SPL : (N_azim, N_ch)-shape array_like
+#             Array of integrated BPF harmonics' SPL per azimuth/file, per
+#             channel, in dB re 20 uPa RMS.
 
-        Notes
-        -----
-        Indices are zero-based, but BPF harmonics are one-based: index 0
-        represents 1xBPF, index 1 represents 2xBPF, etc.
-        """
+#         Notes
+#         -----
+#         Indices are zero-based, but BPF harmonics are one-based: index 0
+#         represents 1xBPF, index 1 represents 2xBPF, etc.
+#         """
 
-        self.tonal_SPL = np.zeros((self.N_azim, self.N_ch))
+#         self.tonal_SPL = np.zeros((self.N_azim, self.N_ch))
 
-        for az in range(self.N_azim):
-            self.tonal_SPL[az, :] = self.azim_PSDs[az].calc_tonal_SPL()
+#         for az in range(self.N_azim):
+#             self.tonal_SPL[az, :] = self.azim_PSDs[az].calc_tonal_SPL()
 
-        return self.tonal_SPL
+#         return self.tonal_SPL
 
 
-    def az_elev_to_polar(self, spl_name, combine_90deg=False):
-        """
-        Calculates the polar directivity pattern for a given SPL calculation
-        by combining measurements made at (azim, elev) = (0, 0-90) and
-        (azim, elev) = (180, 0-90).
+#     def az_elev_to_polar(self, spl_name, combine_90deg=False):
+#         """
+#         Calculates the polar directivity pattern for a given SPL calculation
+#         by combining measurements made at (azim, elev) = (0, 0-90) and
+#         (azim, elev) = (180, 0-90).
 
-        Parameters
-        ----------
-        spl_name : {'oa_SPL', 'broadband_SPL', 'tonal_SPL',
-                    'bpf1_SPL', 'bpf2_SPL'}, str
-            String containing name of SPL function to output.
+#         Parameters
+#         ----------
+#         spl_name : {'oa_SPL', 'broadband_SPL', 'tonal_SPL',
+#                     'bpf1_SPL', 'bpf2_SPL'}, str
+#             String containing name of SPL function to output.
 
-        combine_90deg : bool, optional
-            Boolean flag denoting whether to combine measurements at 90deg.
-            See Notes below.
+#         combine_90deg : bool, optional
+#             Boolean flag denoting whether to combine measurements at 90deg.
+#             See Notes below.
 
 
-        Returns
-        -------
-        polar_angles : (N_angles,)-shape array
-            Array containing the elevation angles from 0deg to 180deg. See
-            Notes below on how 'combine_90deg' flag affects this array.
+#         Returns
+#         -------
+#         polar_angles : (N_angles,)-shape array
+#             Array containing the elevation angles from 0deg to 180deg. See
+#             Notes below on how 'combine_90deg' flag affects this array.
 
-        SPL_polar : (N_angles,)-shape array
-            Array containing the SPL values over elevation angles. See Notes
-            below on how 'combine_90deg' flag affects this array.
+#         SPL_polar : (N_angles,)-shape array
+#             Array containing the SPL values over elevation angles. See Notes
+#             below on how 'combine_90deg' flag affects this array.
 
-        Notes
-        -----
-        A range of polar angles [0 - 180deg] is created by combining
-        measurements made at 0deg azim and 180deg azim, but the two overlapping
-        90deg elevation readings are dealt with in one of two ways:
+#         Notes
+#         -----
+#         A range of polar angles [0 - 180deg] is created by combining
+#         measurements made at 0deg azim and 180deg azim, but the two overlapping
+#         90deg elevation readings are dealt with in one of two ways:
 
-            - if 'combine_90deg = True', they are averaged and shown as a
-            single value at 90deg. The resulting arrays will have 'N_angles=19'
-            points equally spaced between 0 and 180deg elevation.
+#             - if 'combine_90deg = True', they are averaged and shown as a
+#             single value at 90deg. The resulting arrays will have 'N_angles=19'
+#             points equally spaced between 0 and 180deg elevation.
 
-            - if 'combine_90deg = False', they are are instead shown separately
-            at 89deg and 91deg, in order to assess any differences between
-            them. The resulting arrays will have 'N_angles=20' points between
-            0 and 180deg elevation, and all except 90deg are equally spaced.
-        """
+#             - if 'combine_90deg = False', they are are instead shown separately
+#             at 89deg and 91deg, in order to assess any differences between
+#             them. The resulting arrays will have 'N_angles=20' points between
+#             0 and 180deg elevation, and all except 90deg are equally spaced.
+#         """
 
-        spl_names_list = ['oa_SPL', 'broadband_SPL', 'tonal_SPL',
-                          'bpf1_SPL', 'bpf2_SPL', 'bpf3_SPL']
+#         spl_names_list = ['oa_SPL', 'broadband_SPL', 'tonal_SPL',
+#                           'bpf1_SPL', 'bpf2_SPL', 'bpf3_SPL']
 
-        assert spl_name in spl_names_list, "'spl_name' not recognized!"
+#         assert spl_name in spl_names_list, "'spl_name' not recognized!"
 
-        if spl_name in ['oa_SPL', 'broadband_SPL', 'tonal_SPL']:
-            SPL_az_elev = getattr(self, spl_name)
+#         if spl_name in ['oa_SPL', 'broadband_SPL', 'tonal_SPL']:
+#             SPL_az_elev = getattr(self, spl_name)
 
-        elif spl_name == 'bpf1_SPL':
-            SPL_az_elev = getattr(self, 'bpf_SPL')[:, :, 0]
+#         elif spl_name == 'bpf1_SPL':
+#             SPL_az_elev = getattr(self, 'bpf_SPL')[:, :, 0]
 
-        elif spl_name == 'bpf2_SPL':
-            SPL_az_elev = getattr(self, 'bpf_SPL')[:, :, 1]
+#         elif spl_name == 'bpf2_SPL':
+#             SPL_az_elev = getattr(self, 'bpf_SPL')[:, :, 1]
 
-        elif spl_name == 'bpf3_SPL':
-            SPL_az_elev = getattr(self, 'bpf_SPL')[:, :, 2]
+#         elif spl_name == 'bpf3_SPL':
+#             SPL_az_elev = getattr(self, 'bpf_SPL')[:, :, 2]
 
 
-        if combine_90deg:
-            polar_angles = np.linspace(0, 180, 19)
-            SPL_polar = np.zeros((19))
+#         if combine_90deg:
+#             polar_angles = np.linspace(0, 180, 19)
+#             SPL_polar = np.zeros((19))
 
-            # write 0deg-80deg (0deg azim in SPL_az_elev)
-            SPL_polar[:9] = SPL_az_elev[0, :9]
+#             # write 0deg-80deg (0deg azim in SPL_az_elev)
+#             SPL_polar[:9] = SPL_az_elev[0, :9]
 
-            # write 100deg-180deg (180deg azim in SPL_az_elev, reversed)
-            SPL_polar[10:] = (SPL_az_elev[-1, :9])[::-1]
+#             # write 100deg-180deg (180deg azim in SPL_az_elev, reversed)
+#             SPL_polar[10:] = (SPL_az_elev[-1, :9])[::-1]
 
-            # average 90deg elev value from 0deg azim and 180deg azim
-            SPL_polar[9] = np.mean([SPL_az_elev[0, 9], SPL_az_elev[-1, 9]])
+#             # average 90deg elev value from 0deg azim and 180deg azim
+#             SPL_polar[9] = np.mean([SPL_az_elev[0, 9], SPL_az_elev[-1, 9]])
 
 
-        else:
-            polar_angles_1 = np.linspace(0, 90, 10)
-            polar_angles_1[-1] = 89
+#         else:
+#             polar_angles_1 = np.linspace(0, 90, 10)
+#             polar_angles_1[-1] = 89
 
-            polar_angles_2 = np.linspace(90, 180, 10)
-            polar_angles_2[0] = 91
+#             polar_angles_2 = np.linspace(90, 180, 10)
+#             polar_angles_2[0] = 91
 
-            polar_angles = np.concatenate((polar_angles_1, polar_angles_2))
+#             polar_angles = np.concatenate((polar_angles_1, polar_angles_2))
 
-            SPL_polar = np.zeros((20))
+#             SPL_polar = np.zeros((20))
 
-            # write 0deg-89deg (0deg azim in SPL_full)
-            SPL_polar[:10] = SPL_az_elev[0, :]
+#             # write 0deg-89deg (0deg azim in SPL_full)
+#             SPL_polar[:10] = SPL_az_elev[0, :]
 
-            # write 91deg-180deg (180deg azim in SPL_full, reversed)
-            SPL_polar[10:] = (SPL_az_elev[-1, :])[::-1]
+#             # write 91deg-180deg (180deg azim in SPL_full, reversed)
+#             SPL_polar[10:] = (SPL_az_elev[-1, :])[::-1]
 
 
-        return polar_angles, SPL_polar
+#         return polar_angles, SPL_polar
 
 
-    def export_directivity(self, filename):
-        """
-        Export directivity data as HDF5 file. The data contains the
-        measured one-sided PSD over (azim, elev) directions, plus a reference
-        acoustic pressure time series for the inlet direction.
+#     def export_directivity(self, filename):
+#         """
+#         Export directivity data as HDF5 file. The data contains the
+#         measured one-sided PSD over (azim, elev) directions, plus a reference
+#         acoustic pressure time series for the inlet direction.
 
-        The exported HDF5 file will use the following variable (or
-        "dataset", in HDF5 terms) names, with the following attributes:
+#         The exported HDF5 file will use the following variable (or
+#         "dataset", in HDF5 terms) names, with the following attributes:
 
-            ac_pressure_inlet : (Nt,)-shape array
-                azim_inlet : float
-                elev_inlet : float
+#             ac_pressure_inlet : (Nt,)-shape array
+#                 azim_inlet : float
+#                 elev_inlet : float
 
-            psd : (N_azim, N_elev, Ndft//2+1)-shape array
+#             psd : (N_azim, N_elev, Ndft//2+1)-shape array
 
-            rpm_azim : (N_azim,)-shape array
-                nominal_rpm : float
+#             rpm_azim : (N_azim,)-shape array
+#                 nominal_rpm : float
 
-            azim_angles : (N_azim)-shape array
-                units : str
-            elev_angles : (N_elev)-shape array
-                units : str
+#             azim_angles : (N_azim)-shape array
+#                 units : str
+#             elev_angles : (N_elev)-shape array
+#                 units : str
 
-            freq : (Ndft//2+1,)-shape array
-                Ndft : int
-                fs : float
-        """
+#             freq : (Ndft//2+1,)-shape array
+#                 Ndft : int
+#                 fs : float
+#         """
 
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-        # re-reads file, extracts acoustic pressure time series at inlet
-        # direction
-        ds_data = ds_mic_arc.DSRawTimeSeries(self.filenames[-1], self.N_blades)
-        p_inlet = ds_data.mic_data[0, :]
+#         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+#         # re-reads file, extracts acoustic pressure time series at inlet
+#         # direction
+#         ds_data = ds_mic_arc.DSRawTimeSeries(self.filenames[-1], self.N_blades)
+#         p_inlet = ds_data.mic_data[0, :]
 
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-        psd = np.zeros((self.N_azim, self.N_ch, self.Ndft//2+1,))
+#         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+#         psd = np.zeros((self.N_azim, self.N_ch, self.Ndft//2+1,))
 
-        elev_angles = np.linspace(0, 90, self.N_ch)
+#         elev_angles = np.linspace(0, 90, self.N_ch)
 
-        # create new file, fail if file already exists
-        with h5py.File(filename + '.h5', 'x') as dir_file:
+#         # create new file, fail if file already exists
+#         with h5py.File(filename + '.h5', 'x') as dir_file:
 
-            # ----------------------------------------------------------------
-            # acoustic pressure at inlet direction
-            h5p_inlet = dir_file.create_dataset('p_inlet', data=p_inlet)
-            h5p_inlet.attrs['azim_inlet'] = 180.
-            h5p_inlet.attrs['elev_inlet'] = 0.
+#             # ----------------------------------------------------------------
+#             # acoustic pressure at inlet direction
+#             h5p_inlet = dir_file.create_dataset('p_inlet', data=p_inlet)
+#             h5p_inlet.attrs['azim_inlet'] = 180.
+#             h5p_inlet.attrs['elev_inlet'] = 0.
 
-            # ----------------------------------------------------------------
-            # psd as function of (freq, azim, elev)
-            h5psd = dir_file.create_dataset('psd', data=psd)
-            for az in range(self.N_azim):
-                h5psd[az, :, :] = self.azim_PSDs[az].psd
+#             # ----------------------------------------------------------------
+#             # psd as function of (freq, azim, elev)
+#             h5psd = dir_file.create_dataset('psd', data=psd)
+#             for az in range(self.N_azim):
+#                 h5psd[az, :, :] = self.azim_PSDs[az].psd
 
-            # ----------------------------------------------------------------
-            # Measured RPM value at each azim angle, plus nominal RPM
-            h5rpm = dir_file.create_dataset('rpm_azim',
-                                            data = self.rpm_azim)
-            h5rpm.attrs['nominal_rpm'] = self.nominal_rpm
+#             # ----------------------------------------------------------------
+#             # Measured RPM value at each azim angle, plus nominal RPM
+#             h5rpm = dir_file.create_dataset('rpm_azim',
+#                                             data = self.rpm_azim)
+#             h5rpm.attrs['nominal_rpm'] = self.nominal_rpm
 
-            # ----------------------------------------------------------------
-            # azimuth angles, in degrees
-            h5azim = dir_file.create_dataset('azim_angles',
-                                             data = self.azim_angles)
-            h5azim.attrs['units'] = 'degrees'
+#             # ----------------------------------------------------------------
+#             # azimuth angles, in degrees
+#             h5azim = dir_file.create_dataset('azim_angles',
+#                                              data = self.azim_angles)
+#             h5azim.attrs['units'] = 'degrees'
 
-            # elevation angles, in degrees
-            h5elev = dir_file.create_dataset('elev_angles',
-                                             data = elev_angles)
-            h5elev.attrs['units'] = 'degrees'
+#             # elevation angles, in degrees
+#             h5elev = dir_file.create_dataset('elev_angles',
+#                                              data = elev_angles)
+#             h5elev.attrs['units'] = 'degrees'
 
-            # ----------------------------------------------------------------
-            # Frequency values, plus Ndft and sampling freq
-            h5freq = dir_file.create_dataset('freq', data = self.freq)
-            h5freq.attrs['Ndft'] = self.Ndft
-            h5freq.attrs['fs'] = self.fs
+#             # ----------------------------------------------------------------
+#             # Frequency values, plus Ndft and sampling freq
+#             h5freq = dir_file.create_dataset('freq', data = self.freq)
+#             h5freq.attrs['Ndft'] = self.Ndft
+#             h5freq.attrs['fs'] = self.fs
 
 
 
