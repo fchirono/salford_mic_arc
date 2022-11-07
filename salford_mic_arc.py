@@ -35,7 +35,7 @@ import scipy.signal as ss
 
 from sal_constants import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, DEFAULT_WINDOW
 
-from sal_psd_utilities import MultiChannelPSD, MultiFilePSDs
+from sal_psd_utilities import MultiChannelPSD
 
 
 # ##########################################################################
@@ -72,6 +72,7 @@ class DSRawTimeSeries:
         self._read_mic_data(filename, mic_channel_names)
 
         if other_ch_names:
+            self.other_ch_names = other_ch_names
             self._read_other_data(filename, other_ch_names)
 
 
@@ -155,7 +156,7 @@ class DSRawTimeSeries:
         my_filter = ss.butter(filter_order, fc, btype,
                               output='sos', fs=self.fs)
 
-        for ch in range(self.N_ch):
+        for ch in range(self.N_mics):
             # fwd-bkwd filtering of the signals
             hp_data = ss.sosfiltfilt(my_filter, self.mic_data[ch, :])
 
@@ -230,8 +231,8 @@ class DSRawTimeSeries:
 
         n = t0*self.fs
 
-        PSDs = np.zeros((self.N_ch, Ndft//2+1))
-        for ch in range(self.N_ch):
+        PSDs = np.zeros((self.N_mics, Ndft//2+1))
+        for ch in range(self.N_mics):
             freq, PSDs[ch, :] = ss.welch(self.mic_data[ch, n:], self.fs,
                                          window=window, nperseg=Ndft,
                                          noverlap=Noverlap)

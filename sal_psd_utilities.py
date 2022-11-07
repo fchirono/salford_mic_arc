@@ -17,7 +17,6 @@ import h5py
 import numpy as np
 import scipy.signal as ss
 
-import salford_mic_arc
 
 from sal_constants import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, DEFAULT_WINDOW
 
