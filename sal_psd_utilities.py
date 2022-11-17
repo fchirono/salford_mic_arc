@@ -21,9 +21,9 @@ import scipy.signal as ss
 from sal_constants import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, DEFAULT_WINDOW
 
 
-# ##########################################################################
+# #############################################################################
 # %% Class 'MultiChannelPSD'
-# ##########################################################################
+# #############################################################################
 
 class MultiChannelPSD:
     """
@@ -65,7 +65,7 @@ class MultiChannelPSD:
         self.df = self.fs/self.Ndft
 
 
-    # ************************************************************************
+    # *************************************************************************
     def calc_broadband_PSD(self, kernel_size=100, units='Hz'):
         """
         Calculates broadband components of multichannel PSD using median
@@ -85,7 +85,8 @@ class MultiChannelPSD:
 
         """
 
-        assert units in ['points', 'Hz'], "Unknown input for 'units' - must be 'points' or 'Hz' !"
+        assert units in ['points', 'Hz'], \
+            "Unknown input for 'units' - must be 'points' or 'Hz' !"
 
         # if kernel size is given in Hz, calculate equivalent length in points
         if units == 'Hz':
@@ -98,11 +99,13 @@ class MultiChannelPSD:
             self.psd_broadband[ch, :] = ss.medfilt(self.psd[ch, :], kernel_size)
 
 
+    # *************************************************************************
     def find_all_peaks(self, f_low, f_high, dB_above_broadband=3):
         """
-        Finds all peaks in PSD spectrum within a bandwidth [f_low, f_high]. Peaks
-        are not restricted to be at the BPF harmonics. Optional arguments are the
-        height above PSD broadband component as threshold.
+        Find peaks in PSD spectrum within a bandwidth [f_low, f_high]. Peaks
+        are not restricted to be harmonics of a fundamental frequenycy.
+        Optional arguments are the height above PSD broadband component as
+        threshold.
 
         Parameters
         ----------
@@ -168,7 +171,6 @@ class MultiChannelPSD:
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
         # find peak limits
-        # self.find_bpf_peak_lims()
         self.all_peak_lims = self.find_peak_lims(self.all_peaks)
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
@@ -176,7 +178,8 @@ class MultiChannelPSD:
         return self.all_peaks, self.all_peak_lims
 
 
-    def find_peak_lims(self, peak_indices, radius=20, units='points'):
+    # *************************************************************************
+    def find_all_peak_lims(self, peak_indices, radius=20, units='points'):
         """
         For a list of peaks in 'psd', given by 'peak_indices', finds a list
         of lower and upper indices to determine peak widths.
@@ -275,7 +278,7 @@ class MultiChannelPSD:
         return peak_lims
 
 
-    # ************************************************************************
+    # *************************************************************************
     def calc_broadband_SPL(self, f_low, f_high):
         """
         Returns array of integrated broadband SPL per channel, in dB re 20 uPa
@@ -306,6 +309,7 @@ class MultiChannelPSD:
         return self.broadband_SPL
 
 
+    # *************************************************************************
     def calc_oa_SPL(self, f_low, f_high):
         """
         Returns integrated overall SPL per channel, in dB re 20 uPa RMS, within
@@ -335,7 +339,7 @@ class MultiChannelPSD:
         return self.oa_SPL
 
 
-
+    # *************************************************************************
     def calc_all_peaks_SPL(self):
         """
         Returns array of all tones' levels per channel, in dB re 20 uPa RMS.
@@ -382,6 +386,7 @@ class MultiChannelPSD:
         return self.all_peaks_SPL
 
 
+    # *************************************************************************
     def calc_tonal_SPL(self):
         """
         Returns the tonal SPL per channel, as the sum of all tonal (BPF
@@ -431,9 +436,9 @@ class MultiChannelPSD:
         return self.tonal_SPL
 
 
-# ##########################################################################
+# #############################################################################
 # %% Class 'MultiFilePSDs'
-# ##########################################################################
+# #############################################################################
 
 
 # class MultiFilePSDs:
