@@ -316,7 +316,7 @@ class MultiChannelPSD:
 
 
     # *************************************************************************
-    def calc_oa_SPL(self, f_low, f_high):
+    def calc_overall_SPL(self, f_low, f_high):
         """
         Returns integrated overall SPL per channel, in dB re 20 uPa RMS, within
         a frequency range [f_low, f_high].
@@ -331,7 +331,7 @@ class MultiChannelPSD:
 
         Returns
         -------
-        oa_SPL : (N_ch,)-shape array_like
+        overall_SPL : (N_ch,)-shape array_like
             Integrated overall SPL per channel, in dB re 20 uPa RMS, within
             the frequency band [f_low, f_high].
         """
@@ -340,9 +340,9 @@ class MultiChannelPSD:
 
         integrated_oa_psd = np.sum(self.psd[:, freq_mask], axis=1)*self.df
 
-        self.oa_SPL = 10*np.log10(integrated_oa_psd/(P_REF**2))
+        self.overall_SPL = 10*np.log10(integrated_oa_psd/(P_REF**2))
 
-        return self.oa_SPL
+        return self.overall_SPL
 
 
     # *************************************************************************
