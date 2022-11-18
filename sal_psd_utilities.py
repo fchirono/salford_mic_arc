@@ -445,8 +445,11 @@ class MultiFilePSDs:
     from multiple files, collected over a list of azimuthal angles.
     """
 
-    def __init__(self, filenames, azim_angles, Ndft=DEFAULT_NDFT,
-                 Noverlap=DEFAULT_NOVERLAP, window=DEFAULT_WINDOW):
+    def __init__(self, filenames, azim_angles, mic_channel_names,
+                 Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP,
+                 window=DEFAULT_WINDOW):
+
+        # TODO: incorporate mic channel names! (separate multi-file reader class?)
 
         self.filenames = filenames
 
@@ -475,8 +478,7 @@ class MultiFilePSDs:
         # calculate PSDs from remaining files
         for az in range(self.N_azim):
 
-            ds_data = SMA.DSRawTimeSeries(self.filenames[az],
-                                          self.N_blades)
+            ds_data = SMA.DSRawTimeSeries(self.filenames[az])
 
             self.azim_PSDs.append(ds_data.calc_PSDs(Ndft, window, Noverlap))
 
@@ -487,10 +489,11 @@ class MultiFilePSDs:
         self.freq = self.azim_PSDs[0].freq
 
 
-    def calc_broadband_SPL(self, f_low, f_high, f_type='Hz'):
+    def calc_broadband_SPL(self, f_low, f_high, kernel_size=100, units='Hz'):
         """
         Calculates the broadband SPL within a frequency band ['f_low', 'f_high']
-        by integrating the broadband PSDs within this band. Results are returned
+        by integrating the broadband PSDs within this band. Broadband PSDs are
+        calculated using a median filter method, and results are returned
         in dB re 20 uPa RMS.
 
 
@@ -502,10 +505,11 @@ class MultiFilePSDs:
         f_high : float
             High frequency limit, in Hz.
 
-        'f_type' : {'Hz', 'f_shaft'}, optional
-            String determining whether 'f_low', 'f_high' are absolute
-            frequencies in Hz or ratios of the shaft frequency. Default is 'Hz'
+        kernel_size : int, optional
+            Size of median filter kernel. The default is 100 Hz.
 
+        units : {'points', 'Hz'}, optional
+            Units for kernel size. Default is 'Hz'.
 
         Returns
         -------
@@ -514,33 +518,16 @@ class MultiFilePSDs:
             20 uPa RMS, within the frequency band [f_low, f_high].
         """
 
-        assert f_type in ['Hz', 'f_shaft'], \
-            "Input argument 'f_type' must be either 'Hz' or 'f_shaft' !"
-
         self.broadband_SPL = np.zeros((self.N_azim, self.N_ch))
 
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-        if f_type == 'Hz':
-
-            for az in range(self.N_azim):
-                self.azim_PSDs[az].calc_broadband_PSD()
-                self.broadband_SPL[az, :] = self.azim_PSDs[az].calc_broadband_SPL(f_low, f_high)
-
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-        elif f_type == 'f_shaft':
-            for az in range(self.N_azim):
-
-                f_shaft = self.rpm_azim[az]/60
-
-                self.azim_PSDs[az].calc_broadband_PSD()
-                self.broadband_SPL[az, :] = self.azim_PSDs[az].calc_broadband_SPL(f_low*f_shaft, f_high*f_shaft)
-
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+        for az in range(self.N_azim):
+            self.azim_PSDs[az].calc_broadband_PSD(kernel_size, units)
+            self.broadband_SPL[az, :] = self.azim_PSDs[az].calc_broadband_SPL(f_low, f_high)
 
         return self.broadband_SPL
 
 
-    def calc_overall_SPL(self, f_low, f_high, f_type='Hz'):
+    def calc_overall_SPL(self, f_low, f_high):
         """
         Calculates the overall SPL within a frequency band ['f_low', 'f_high']
         by integrating the PSDs within this band. Results are returned
@@ -554,10 +541,6 @@ class MultiFilePSDs:
         f_high : float
             High frequency limit, in Hz.
 
-        'f_type' : {'Hz', 'f_shaft'}
-            String determining whether 'f_low', 'f_high' are absolute
-            frequencies in Hz or ratios of the shaft frequency.
-
         Returns
         -------
         overall_SPL : (N_azim, N_ch)-shape array_like
@@ -566,25 +549,10 @@ class MultiFilePSDs:
 
         """
 
-        assert f_type in ['Hz', 'f_shaft'], \
-            "Input argument 'f_type' must be either 'Hz' or 'f_shaft' !"
-
         self.overall_SPL = np.zeros((self.N_azim, self.N_ch))
 
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-        if f_type == 'Hz':
-
-            for az in range(self.N_azim):
-                self.overall_SPL[az, :] = self.azim_PSDs[az].calc_overall_SPL(f_low, f_high)
-
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
-        elif f_type == 'f_shaft':
-            for az in range(self.N_azim):
-
-                f_shaft = self.rpm_azim[az]/60
-                self.overall_SPL[az, :] = self.azim_PSDs[az].calc_overall_SPL(f_low*f_shaft, f_high*f_shaft)
-
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+        for az in range(self.N_azim):
+            self.overall_SPL[az, :] = self.azim_PSDs[az].calc_overall_SPL(f_low, f_high)
 
         return self.oa_SPL
 
@@ -651,7 +619,6 @@ class MultiFilePSDs:
         """
         Returns an array of peaks' levels per azimuth/file, per channel, in
         dB re 20 uPa RMS.
-
 
         Parameters
         ----------
