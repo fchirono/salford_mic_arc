@@ -110,8 +110,8 @@ class DSRawTimeSeries:
             "Channel named {} does not exist in this hdf5 file!"
 
         # read number of mic channels
-        self.N_mics = len(mic_ch_names)
-        self.mic_data = np.zeros((self.N_mics, self.T*self.fs))
+        self.N_ch = len(mic_ch_names)
+        self.mic_data = np.zeros((self.N_ch, self.T*self.fs))
 
         # read mic data from HDF5 file
         for ch_index, ch_name in enumerate(mic_ch_names):
@@ -164,7 +164,7 @@ class DSRawTimeSeries:
         my_filter = ss.butter(filter_order, fc, btype,
                               output='sos', fs=self.fs)
 
-        for ch in range(self.N_mics):
+        for ch in range(self.N_ch):
             # fwd-bkwd filtering of the signals
             hp_data = ss.sosfiltfilt(my_filter, self.mic_data[ch, :])
 
@@ -246,8 +246,8 @@ class DSRawTimeSeries:
 
         n = t0*self.fs
 
-        PSDs = np.zeros((self.N_mics, Ndft//2+1))
-        for ch in range(self.N_mics):
+        PSDs = np.zeros((self.N_ch, Ndft//2+1))
+        for ch in range(self.N_ch):
             freq, PSDs[ch, :] = ss.welch(self.mic_data[ch, n:], self.fs,
                                          window=window, nperseg=Ndft,
                                          noverlap=Noverlap)

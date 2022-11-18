@@ -38,7 +38,7 @@ class MultiChannelPSD:
         self.psd = np.atleast_2d(psd)
 
         # number of microphone channels
-        self.N_mics = self.psd.shape[0]
+        self.N_ch = self.psd.shape[0]
 
         # frequency vector (single-sided)
         #   (Ndft//2+1,)-shape array_like
