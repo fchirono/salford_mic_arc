@@ -140,7 +140,7 @@ class DSRawTimeSeries:
         with h5py.File(filename, 'r') as h5file:
 
             # -----------------------------------------------------------------
-            # assert all mic channel names actually exist in h5file
+            # assert all channel names actually exist in h5file
             channel_names = list(h5file.keys())
 
             assert set(other_ch_names).issubset(channel_names), \
@@ -151,6 +151,30 @@ class DSRawTimeSeries:
                 data = h5file[ch_name][:, 1]
                 setattr(self, ch_name, data)
             # -----------------------------------------------------------------
+
+
+    def calc_chs_mean(self, ch_names):
+        """
+        Iterates over a list of channel names and calculates their mean value
+        over time. Generally used for non-acoustic data - e.g. temperature,
+        load cells, etc.
+
+        For each channel named 'xx', stores the result in a new
+        attribute named 'mean_xx'.
+
+        Parameters
+        ----------
+        other_ch_names : list
+            List of strings containing the names of the other channels
+            in DewesoftX - e.g. 'RPM', 'Temperature', 'LoadCell', etc.
+        """
+
+        for name in ch_names:
+            assert hasattr(self, name), \
+                "Channel {} does not exist in this DSRawTimeSeries instance!".format(name)
+
+            mean_value = np.mean( getattr(self, name))
+            setattr(self, 'mean_' + name, mean_value)
 
 
     # *************************************************************************
