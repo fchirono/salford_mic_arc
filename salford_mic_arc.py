@@ -52,6 +52,7 @@ class DSRawTimeSeries:
                  other_ch_names=None, fs2=None):
 
         self.filename = filename
+        self.mic_channel_names = mic_channel_names
 
         # nominal duration of data recording, in seconds
         self.T = T
@@ -68,9 +69,10 @@ class DSRawTimeSeries:
             self.fs2 = fs2
             self.t2 = np.linspace(0, self.T - 1/self.fs2, self.T*self.fs2)
 
-        # read data from filename
+        # read mic data from filename
         self._read_mic_chs(filename, mic_channel_names)
 
+        # if present, read other channels' data from filename
         if other_ch_names:
             self.other_ch_names = other_ch_names
             self._read_other_chs(filename, other_ch_names)
@@ -328,12 +330,14 @@ class DSRawTimeSeries:
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
         # check whether 'channels' is int, if so create channel list
         if isinstance(channels, int):
-            assert channels<=10, "If int, 'channels' must be equal to or less than 10!"
+            assert channels<=10, \
+                "If int, 'channels' must be equal to or less than 10!"
             ch_list = [n for n in range(channels)]
 
         # if channels is list/np array, copy as is
         elif isinstance(channels, (list, np.ndarray)):
-            assert all(ch<10 for ch in channels), "If list, channel indices must be less than 10!"
+            assert all(ch<10 for ch in channels), \
+                "If list, channel indices must be less than 10!"
             ch_list = channels.copy()
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
