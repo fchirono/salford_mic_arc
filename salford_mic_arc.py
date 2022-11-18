@@ -139,7 +139,6 @@ class DSRawTimeSeries:
 
         with h5py.File(filename, 'r') as h5file:
 
-            # -----------------------------------------------------------------
             # assert all channel names actually exist in h5file
             channel_names = list(h5file.keys())
 
@@ -150,9 +149,9 @@ class DSRawTimeSeries:
             for ch_name in other_ch_names:
                 data = h5file[ch_name][:, 1]
                 setattr(self, ch_name, data)
-            # -----------------------------------------------------------------
 
 
+    # *************************************************************************
     def calc_chs_mean(self, ch_names):
         """
         Iterates over a list of channel names and calculates their mean value
