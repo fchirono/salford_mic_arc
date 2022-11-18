@@ -38,6 +38,7 @@ class MultiChannelPSD:
         #   (N_mics, Ndft//2+1)-shape array_like
         self.psd = np.atleast_2d(psd)
 
+        # number of microphone channels
         self.N_mics = self.psd.shape[0]
 
         # frequency vector (single-sided)
@@ -100,7 +101,7 @@ class MultiChannelPSD:
 
 
     # *************************************************************************
-    def find_all_peaks(self, f_low, f_high, dB_above_broadband=3):
+    def find_peaks(self, f_low, f_high, dB_above_broadband=3):
         """
         Find peaks in PSD spectrum within a bandwidth [f_low, f_high]. Peaks
         are not restricted to be harmonics of a fundamental frequenycy.
@@ -116,16 +117,16 @@ class MultiChannelPSD:
             High frequency limit, in Hz.
 
         dB_above_broadband : float, optional
-            Minimum peak height above broadband PSD component, in decibels. Default
-            value is 3 dB.
+            Minimum peak height above broadband PSD component, in decibels.
+            Default value is 3 dB.
 
 
         Returns
         -------
-        'all_peaks' : (N_ch, N_peaks)-shape array_like
-            Indices of all peaks above threshold.
+        peak_indices : (N_ch, N_peaks)-shape array_like
+            Array of indices for all peaks above threshold.
 
-        'all_peak_lims' : (N_ch, N_peaks, 2)-shape array_like
+        peak_lims : (N_ch, N_peaks, 2)-shape array_like
             Lower and upper indices determining the width of each peak.
             Defined as the points where the peak in raw PSD crosses the PSD
             broadband component.
@@ -139,47 +140,47 @@ class MultiChannelPSD:
 
         freq_mask = (self.freq >= f_low) & (self.freq <= f_high)
 
-        # initialize 'all_peaks' with a large size (Ndft/2+1), reduce it later
-        self.all_peaks = np.zeros((self.N_ch, self.Ndft//2+1), dtype=int)
+        # initialize 'peak_indices' with a large size (Ndft/2+1), reduce it later
+        self.peak_indices = np.zeros((self.N_ch, self.Ndft//2+1), dtype=int)
 
-        N_allpeaks = 0
+        N_peaks = 0
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
         for ch in range(self.N_ch):
             height_range = (self.psd_broadband[ch, freq_mask]*gain_above_broadband,
                             None)
 
-            peak_indices, peak_properties = ss.find_peaks(self.psd[ch, freq_mask],
-                                                          height=height_range)
+            peak_indices_ch, peak_properties = ss.find_peaks(self.psd[ch, freq_mask],
+                                                             height=height_range)
 
             # number of peaks found in this ch
-            N_peaks = peak_indices.shape[0]
-            self.all_peaks[ch, :N_peaks] = peak_indices
+            N_peaks_ch = peak_indices_ch.shape[0]
+            self.peak_indices[ch, :N_peaks_ch] = peak_indices_ch
 
             # largest number of peaks found so far
-            N_allpeaks = np.max([N_peaks, N_allpeaks])
+            N_peaks = np.max([N_peaks, N_peaks_ch])
 
-        # change size of 'all_peaks' to largest no. of peaks found
-        temp_allpeaks = np.copy(self.all_peaks[:, :N_allpeaks])
-        self.all_peaks = np.copy(temp_allpeaks)
+        # change size of 'peak_indices' to largest no. of peaks found
+        temp_peaks = np.copy(self.peak_indices[:, :N_peaks])
+        self.peak_indices = np.copy(temp_peaks)
 
         # add initial index of freq_mask to all non-zero entries
-        self.all_peaks[self.all_peaks!=0] += np.argwhere(freq_mask)[0, 0]
+        self.peak_indices[self.peak_indices!=0] += np.argwhere(freq_mask)[0, 0]
 
         # replace zeros with '-1' as flag for 'no peak found'
-        self.all_peaks[self.all_peaks==0] = -1
+        self.peak_indices[self.peak_indices==0] = -1
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
         # find peak limits
-        self.all_peak_lims = self.find_peak_lims(self.all_peaks)
+        self.peak_lims = self.find_peak_lims(self.peak_indices)
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
 
-        return self.all_peaks, self.all_peak_lims
+        return self.peak_indices, self.peak_lims
 
 
     # *************************************************************************
-    def find_all_peak_lims(self, peak_indices, radius=20, units='points'):
+    def find_peak_lims(self, peak_indices, radius=20, units='points'):
         """
         For a list of peaks in 'psd', given by 'peak_indices', finds a list
         of lower and upper indices to determine peak widths.
@@ -220,14 +221,15 @@ class MultiChannelPSD:
         for ch in range(self.N_ch):
             for n_pk, peak_index in enumerate(peak_indices[ch, :]):
 
-                # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+                # -.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
                 # if peak index is '-1', write '-1' on peak lims too
                 if peak_index == -1:
                     peak_lims[ch, n_pk, :] = -1
 
                 else:
-                    # If peak is closer than 'f_radius' to index 0, use index 0 as
-                    # peak lim
+                    # .........................................................
+                    # If peak is closer than 'f_radius' to index 0, use index 0
+                    # as peak lim
                     if (peak_index - radius)<=0:
                         peak_lims[ch, n_pk, 0] = 0
 
@@ -248,7 +250,7 @@ class MultiChannelPSD:
 
                         peak_lims[ch, n_pk, 0] = lower_lim + (peak_index - radius)
 
-                    # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+                    # .........................................................
                     # If peak is closer than 'f_radius' to 'N_data', use 'N_data'
                     # as peak lim
                     if (peak_index + radius+1) >= N_data:
@@ -270,10 +272,12 @@ class MultiChannelPSD:
 
                         peak_lims[ch, n_pk, 1] = upper_lim + peak_index
 
+                # -.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
                 # check if peak_lims are identical to any previous peak,
                 # replace with -1 if so
                 if ( peak_lims[ch, n_pk, :] in peak_lims[ch, :n_pk, :]):
                     peak_lims[ch, n_pk, :] = -1
+                # -.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
 
         return peak_lims
 
