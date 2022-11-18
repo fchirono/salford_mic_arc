@@ -12,8 +12,6 @@ Author:
 """
 
 
-import h5py
-
 import numpy as np
 import scipy.signal as ss
 
@@ -134,7 +132,7 @@ class MultiChannelPSD:
 
         # assert instance has psd broadband defined
         assert hasattr(self, 'psd_broadband'), \
-            "Cannot find peaks: PSD instance does not have 'psd_broadband' attribute defined!"
+            "Cannot find peaks: PSD instance does not have attribute 'psd_broadband'!"
 
         gain_above_broadband = 10**(dB_above_broadband/10)
 
@@ -145,7 +143,7 @@ class MultiChannelPSD:
 
         N_peaks = 0
 
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
         for ch in range(self.N_ch):
             height_range = (self.psd_broadband[ch, freq_mask]*gain_above_broadband,
                             None)
@@ -160,6 +158,7 @@ class MultiChannelPSD:
             # largest number of peaks found so far
             N_peaks = np.max([N_peaks, N_peaks_ch])
 
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
         # change size of 'peak_indices' to largest no. of peaks found
         temp_peaks = np.copy(self.peak_indices[:, :N_peaks])
         self.peak_indices = np.copy(temp_peaks)
@@ -170,11 +169,10 @@ class MultiChannelPSD:
         # replace zeros with '-1' as flag for 'no peak found'
         self.peak_indices[self.peak_indices==0] = -1
 
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
         # find peak limits
         self.peak_lims = self._find_peak_lims(self.peak_indices)
 
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
         return self.peak_indices, self.peak_lims
 
@@ -303,6 +301,10 @@ class MultiChannelPSD:
             the frequency band [f_low, f_high].
         """
 
+        # assert instance has psd broadband defined
+        assert hasattr(self, 'psd_broadband'), \
+            "Cannot calculate broadband SPL: MutiChannelPSD instance does not have attribute 'psd_broadband'!"
+
         freq_mask = (self.freq >= f_low) & (self.freq <= f_high)
 
         integrated_broadband_psd = np.sum(self.psd_broadband[:, freq_mask],
@@ -344,9 +346,9 @@ class MultiChannelPSD:
 
 
     # *************************************************************************
-    def calc_all_peaks_SPL(self):
+    def _calc_peaks_SPL(self):
         """
-        Returns array of all tones' levels per channel, in dB re 20 uPa RMS.
+        Returns array of all peaks' SPL per channel, in dB re 20 uPa RMS.
 
         Parameters
         ----------
@@ -354,30 +356,32 @@ class MultiChannelPSD:
 
         Returns
         -------
-        all_peaks_SPL : (N_ch, N_peaks)-shape array_like
-            Array of integrated tones' SPL per channel, in dB re 20 uPa RMS.
+        peaks_SPL : (N_ch, N_peaks)-shape array_like
+            Array of integrated peaks' SPL per channel, in dB re 20 uPa RMS.
 
         Notes
         -----
-        Number of tones can vary across channels.
+        Number of tones can vary across channels. If a given peak is not present
+        on a channel, its SPL is NaN.
         """
 
-        assert hasattr(self, 'all_peak_lims'), "Attribute 'all_peak_lims' not found!"
+        assert hasattr(self, 'peak_lims'), \
+            "Cannot calculate peaks' SPL: MultiChannelPSD instance does not have attribute 'peak_lims'!"
 
-        N_peaks = self.all_peaks.shape[1]
+        N_peaks = self.peaks.shape[1]
 
-        self.all_peaks_SPL = np.zeros((self.N_ch, N_peaks))
+        self.peaks_SPL = np.zeros((self.N_ch, N_peaks))
 
         for ch in range(self.N_ch):
             for n_pk in range(N_peaks):
 
                 # if peak lims is -1 (no peak found), SPL is NaN
-                if self.all_peak_lims[ch, n_pk, 0] == -1:
-                    self.all_peaks_SPL[ch, n_pk] = np.nan
+                if self.peak_lims[ch, n_pk, 0] == -1:
+                    self.peaks_SPL[ch, n_pk] = np.nan
 
                 else:
-                    peak_range = np.arange(self.all_peak_lims[ch, n_pk, 0],
-                                           self.all_peak_lims[ch, n_pk, 1]+1)
+                    peak_range = np.arange(self.peak_lims[ch, n_pk, 0],
+                                           self.peak_lims[ch, n_pk, 1]+1)
 
                     # subtract broadband content from PSD peak
                     peak_minus_bb = (self.psd[ch, peak_range]
@@ -385,16 +389,15 @@ class MultiChannelPSD:
 
                     integrated_peak_psd = np.sum(peak_minus_bb)*self.df
 
-                    self.all_peaks_SPL[ch, n_pk] = 10*np.log10(integrated_peak_psd/(P_REF**2))
+                    self.peaks_SPL[ch, n_pk] = 10*np.log10(integrated_peak_psd/(P_REF**2))
 
-        return self.all_peaks_SPL
+        return self.peaks_SPL
 
 
     # *************************************************************************
     def calc_tonal_SPL(self):
         """
-        Returns the tonal SPL per channel, as the sum of all tonal (BPF
-        harmonics or other peaks) SPLs.
+        Returns the tonal SPL per channel, as the sum of all peaks' SPLs.
 
         Parameters
         ----------
@@ -403,30 +406,21 @@ class MultiChannelPSD:
         Returns
         -------
         tonal_SPL : (N_ch,)-shape array_like
-            Array of integrated BPF harmonics' SPL per channel, in dB re 20 uPa
+            Array of integrated peaks' SPL per channel, in dB re 20 uPa.
             RMS.
 
         Notes
         -----
-        Indices are zero-based, but BPF harmonics are one-based: index 0
-        represents 1xBPF, index 1 represents 2xBPF, etc.
+        Must be called after 'find_peaks' method.
         """
 
-        assert (hasattr(self, 'bpf_peak_lims') or hasattr(self, 'all_peak_lims')),\
-            "Attributes 'bpf_peak_lims' or 'all_peak_lims' not found!"
+        assert hasattr(self, 'peak_lims'),\
+            "Cannot calculate tonal SPL: MultiChannelPSD instance does not have attribute 'peak_lims'!"
 
         self.tonal_SPL = np.zeros(self.N_ch)
 
-        # If analysing BPF peaks only:
-        if hasattr(self, 'bpf_peak_lims'):
-            self.calc_bpf_SPL()
-            peaks_SPL = self.bpf_SPL
-
-        # otherwise, if analysing all peaks in PSD:
-        elif hasattr(self, 'all_peak_lims'):
-            self.calc_all_peaks_SPL()
-            peaks_SPL = self.all_peaks_SPL
-
+        self._calc_peaks_SPL()
+        peaks_SPL = self.peaks_SPL
 
         for ch in range(self.N_ch):
 
