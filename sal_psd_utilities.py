@@ -172,7 +172,7 @@ class MultiChannelPSD:
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
         # find peak limits
-        self.peak_lims = self.find_peak_lims(self.peak_indices)
+        self.peak_lims = self._find_peak_lims(self.peak_indices)
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
 
@@ -180,7 +180,7 @@ class MultiChannelPSD:
 
 
     # *************************************************************************
-    def find_peak_lims(self, peak_indices, radius=20, units='points'):
+    def _find_peak_lims(self, peak_indices, radius=20, units='points'):
         """
         For a list of peaks in 'psd', given by 'peak_indices', finds a list
         of lower and upper indices to determine peak widths.
