@@ -445,28 +445,20 @@ class MultiFilePSDs:
     from multiple files, collected over a list of azimuthal angles.
     """
 
-    def __init__(self, filenames, N_blades, azim_angles, nominal_rpm,
-                  Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP, window=DEFAULT_WINDOW):
+    def __init__(self, filenames, azim_angles, Ndft=DEFAULT_NDFT,
+                 Noverlap=DEFAULT_NOVERLAP, window=DEFAULT_WINDOW):
 
         self.filenames = filenames
-
-        self.N_blades = N_blades
 
         self.azim_angles = azim_angles
         self.N_azim = len(azim_angles)
 
-        self.nominal_rpm = nominal_rpm
-
-        assert len(self.filenames) == self.N_azim, "Number of elements in 'filenames' and 'azim_angles' does not match!"
+        assert len(self.filenames) == self.N_azim, \
+            "Number of elements in 'filenames' and 'azim_angles' does not match!"
 
         self.Ndft = Ndft
         self.window = window
         self.Noverlap = Noverlap
-
-        self.thrust_azim = np.zeros(self.N_azim)
-        self.temp_azim = np.zeros(self.N_azim)
-        self.rpm_azim = np.zeros(self.N_azim)
-        self.bpf_azim = np.zeros(self.N_azim)
 
         self.calc_azim_PSDs(Ndft, window, Noverlap)
 
