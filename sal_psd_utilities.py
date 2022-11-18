@@ -480,35 +480,11 @@ class MultiFilePSDs:
 
             self.azim_PSDs.append(ds_data.calc_PSDs(Ndft, window, Noverlap))
 
-            if hasattr(ds_data, 'avg_rpm'):
-                # If time-domain data has attr 'avg_rpm', use that
-                self.rpm_azim[az] = ds_data.avg_rpm
-            else:
-                # if not, get nominal RPM and use it to estimate RPM and BPF
-                # from f_shaft peak in acoustic data
-
-                f_shaft_approx = self.nominal_rpm/60
-                f_shaft = ds_data.estimate_peak_freq(f_shaft_approx - 20,
-                                                      f_shaft_approx + 20,
-                                                      Ndft=2**14)
-                self.rpm_azim[az] = f_shaft*60
-                self.bpf_azim[az] = f_shaft*self.N_blades
-
-            if hasattr(ds_data, 'avg_thrust'):
-                self.thrust_azim[az] = ds_data.avg_thrust
-
-            if hasattr(ds_data, 'avg_temp'):
-                self.temp_azim[az] = ds_data.avg_temp
-
-            if hasattr(ds_data, 'avg_bpf'):
-                self.bpf_azim[az] = ds_data.avg_bpf
-
         # brings some metadata to current namespace
         self.N_ch = (self.azim_PSDs[0].psd).shape[0]
         self.fs = self.azim_PSDs[0].fs
         self.df = self.azim_PSDs[0].df
         self.freq = self.azim_PSDs[0].freq
-
 
 
     def calc_broadband_SPL(self, f_low, f_high, f_type='Hz'):
