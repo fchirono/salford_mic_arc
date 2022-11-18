@@ -33,7 +33,7 @@ class MultiChannelPSD:
     def __init__(self, psd, freq, fs, Ndft=DEFAULT_NDFT,
                  Noverlap=DEFAULT_NOVERLAP, window=DEFAULT_WINDOW):
 
-        # Power spectral density values (single sided)
+        # Array of Power Spectral Density values (single sided)
         #   (N_mics, Ndft//2+1)-shape array_like
         self.psd = np.atleast_2d(psd)
 
