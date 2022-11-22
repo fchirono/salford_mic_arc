@@ -38,4 +38,3 @@ from sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, DEFAULT_WINDOW
 from sma_singlefile import SingleFileTimeSeries, SingleFilePSD
 from sma_multifile import MultiFileTimeSeries, MultiFilePSD
 
-

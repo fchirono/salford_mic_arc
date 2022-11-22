@@ -99,10 +99,6 @@ class MultiFileTimeSeries:
             self.files[fi].filter_data(filter_order, fc, btype)
 
 
-    # *************************************************************************
-    def calc_PSD(self):
-        pass
-
 
 # #############################################################################
 # %% Class 'MultiFilePSDs'
@@ -111,15 +107,16 @@ class MultiFileTimeSeries:
 class MultiFilePSD:
     """
     Class to store post-processed frequency-domain power spectral density data
-    from multiple files, collected over a list of azimuthal angles.
+    from multiple files, collected over a list of filenames.
     """
 
-    def __init__(self, filenames, mic_channel_names,
-                 Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP,
-                 window=DEFAULT_WINDOW):
+    def __init__(self, filenames, mic_channel_names, Ndft=DEFAULT_NDFT,
+                 Noverlap=DEFAULT_NOVERLAP, window=DEFAULT_WINDOW):
 
         self.filenames = filenames
         self.N_files = len(self.filenames)
+
+        self.mic_channel_names = mic_channel_names
 
         self.Ndft = Ndft
         self.window = window
@@ -129,26 +126,27 @@ class MultiFilePSD:
 
 
     def calc_PSDs(self, Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP,
-                        window=DEFAULT_WINDOW):
+                  window=DEFAULT_WINDOW):
         """
         Calculates PSDs for all files in list of file names.
         """
 
         # create list of 'SingleFilePSD' objects
-        self.azim_PSDs = []
+        self.files_PSDs = []
 
         # calculate PSDs from remaining files
-        for az in range(self.N_azim):
+        for fi in range(self.N_files):
 
-            ds_data = SingleFileTimeSeries(self.filenames[az])
+            ds_data = SingleFileTimeSeries(self.filenames[fi],
+                                           self.mic_channel_names)
 
-            self.azim_PSDs.append(ds_data.calc_PSDs(Ndft, window, Noverlap))
+            self.files_PSDs.append(ds_data.calc_PSDs(Ndft, window, Noverlap))
 
         # brings some metadata to current namespace
-        self.N_ch = (self.azim_PSDs[0].psd).shape[0]
-        self.fs = self.azim_PSDs[0].fs
-        self.df = self.azim_PSDs[0].df
-        self.freq = self.azim_PSDs[0].freq
+        self.N_ch = (self.files_PSDs[0].psd).shape[0]
+        self.fs = self.files_PSDs[0].fs
+        self.df = self.files_PSDs[0].df
+        self.freq = self.files_PSDs[0].freq
 
 
     def calc_broadband_SPL(self, f_low, f_high, kernel_size=100, units='Hz'):
@@ -175,16 +173,16 @@ class MultiFilePSD:
 
         Returns
         -------
-        broadband_SPL : (N_azim, N_ch)-shape array_like
-            Integrated broadband SPL per azimuth/file, per channel, in dB re
+        broadband_SPL : (N_files, N_ch)-shape array_like
+            Integrated broadband SPL per file, per channel, in dB re
             20 uPa RMS, within the frequency band [f_low, f_high].
         """
 
-        self.broadband_SPL = np.zeros((self.N_azim, self.N_ch))
+        self.broadband_SPL = np.zeros((self.N_files, self.N_ch))
 
-        for az in range(self.N_azim):
-            self.azim_PSDs[az].calc_broadband_PSD(kernel_size, units)
-            self.broadband_SPL[az, :] = self.azim_PSDs[az].calc_broadband_SPL(f_low, f_high)
+        for az in range(self.N_files):
+            self.files_PSDs[az].calc_broadband_PSD(kernel_size, units)
+            self.broadband_SPL[az, :] = self.files_PSDs[az].calc_broadband_SPL(f_low, f_high)
 
         return self.broadband_SPL
 
@@ -205,18 +203,18 @@ class MultiFilePSD:
 
         Returns
         -------
-        overall_SPL : (N_azim, N_ch)-shape array_like
-            Integrated overall SPL per azimuth/file, per channel, in dB re 20
+        overall_SPL : (N_files, N_ch)-shape array_like
+            Integrated overall SPL per file, per channel, in dB re 20
             uPa RMS, within the frequency band [f_low, f_high].
 
         """
 
-        self.overall_SPL = np.zeros((self.N_azim, self.N_ch))
+        self.overall_SPL = np.zeros((self.N_files, self.N_ch))
 
-        for az in range(self.N_azim):
-            self.overall_SPL[az, :] = self.azim_PSDs[az].calc_overall_SPL(f_low, f_high)
+        for az in range(self.N_files):
+            self.overall_SPL[az, :] = self.files_PSDs[az].calc_overall_SPL(f_low, f_high)
 
-        return self.oa_SPL
+        return self.overall_SPL
 
 
     def find_peaks(self, f_low, f_high, dB_above_broadband=3):
@@ -240,10 +238,10 @@ class MultiFilePSD:
 
         Returns
         -------
-        'peak_indices' : (N_azim, N_ch, N_peaks)-shape array_like
+        'peak_indices' : (N_files, N_ch, N_peaks)-shape array_like
             Indices of all peaks above threshold.
 
-        'peak_lims' : (N_azim, N_ch, N_peaks, 2)-shape array_like
+        'peak_lims' : (N_files, N_ch, N_peaks, 2)-shape array_like
             Lower and upper indices determining the width of each peak.
             Defined as the points where the peak in raw PSD crosses the PSD
             broadband component.
@@ -251,35 +249,35 @@ class MultiFilePSD:
 
         N_peaks_max = 0
 
-        self.all_peaks = np.zeros((self.N_azim, self.N_ch, self.Ndft//2+1),
+        self.peak_indices = np.zeros((self.N_files, self.N_ch, self.Ndft//2+1),
+                                     dtype=int)
+        self.peak_lims = np.zeros((self.N_files, self.N_ch, self.Ndft//2+1, 2),
                                   dtype=int)
-        self.all_peak_lims = np.zeros((self.N_azim, self.N_ch, self.Ndft//2+1, 2),
-                                      dtype=int)
 
-        for az in range(self.N_azim):
-            self.azim_PSDs[az].find_all_peaks(f_low, f_high, dB_above_broadband)
+        for az in range(self.N_files):
+            self.files_PSDs[az].find_peaks(f_low, f_high, dB_above_broadband)
 
-            N_peaks = self.azim_PSDs[az].all_peaks.shape[1]
+            N_peaks = self.files_PSDs[az].peak_indices.shape[1]
 
-            self.all_peaks[az, :, :N_peaks] = self.azim_PSDs[az].all_peaks
-            self.all_peak_lims[az, :, :N_peaks, :] = self.azim_PSDs[az].all_peak_lims
+            self.peak_indices[az, :, :N_peaks] = self.files_PSDs[az].peak_indices
+            self.peak_lims[az, :, :N_peaks, :] = self.files_PSDs[az].peak_lims
 
             N_peaks_max = np.max([N_peaks_max, N_peaks])
 
-        # change size of 'all_peaks' to largest no. of peaks found
-        temp_allpeaks = np.copy(self.all_peaks[:, :, :N_peaks_max])
-        self.all_peaks = np.copy(temp_allpeaks)
+        # change size of 'peak_indices' to largest no. of peaks found
+        temp_peak_indices = np.copy(self.peak_indices[:, :, :N_peaks_max])
+        self.peak_indices = np.copy(temp_peak_indices)
 
-        # change size of 'all_peaks' to largest no. of peaks found
-        temp_allpeak_lims = np.copy(self.all_peak_lims[:, :, :N_peaks_max, :])
-        self.all_peak_lims = np.copy(temp_allpeak_lims)
+        # change size of 'peak_indices' to largest no. of peaks found
+        temp_allpeak_lims = np.copy(self.peak_lims[:, :, :N_peaks_max, :])
+        self.peak_lims = np.copy(temp_allpeak_lims)
 
-        return self.all_peaks, self.all_peak_lims
+        return self.peak_indices, self.peak_lims
 
 
     def calc_peaks_SPL(self):
         """
-        Returns an array of peaks' levels per azimuth/file, per channel, in
+        Returns an array of peaks' levels per file, per channel, in
         dB re 20 uPa RMS.
 
         Parameters
@@ -288,29 +286,29 @@ class MultiFilePSD:
 
         Returns
         -------
-        peaks_SPL : (N_azim, N_ch, N_peaks)-shape array_like
-            Array of integrated tones' SPL per azimuth/file, per channel, in
+        peaks_SPL : (N_files, N_ch, N_peaks)-shape array_like
+            Array of integrated tones' SPL per file, per channel, in
             dB re 20 uPa RMS.
 
         Notes
         -----
-        Number of tones can vary per channel and azimuth/file.
+        Number of tones can vary per channel and file.
         """
 
-        N_peaks = self.all_peaks.shape[2]
+        N_peaks = self.peak_indices.shape[2]
 
-        self.peaks_SPL = np.zeros((self.N_azim, self.N_ch, N_peaks))
+        self.peaks_SPL = np.zeros((self.N_files, self.N_ch, N_peaks))
 
-        for az in range(self.N_azim):
+        for az in range(self.N_files):
 
-            self.peaks_SPL[az, :, :] = self.azim_PSDs[az].calc_peaks_SPL()
+            self.peaks_SPL[az, :, :] = self.files_PSDs[az].calc_peaks_SPL()
 
         return self.peaks_SPL
 
 
     def calc_tonal_SPL(self):
         """
-        Returns the tonal SPL per azimuth/file, per channel, as the sum of all
+        Returns the tonal SPL per file, per channel, as the sum of all
         tones (BPF harmonics or other peaks) SPLs.
 
         Parameters
@@ -319,8 +317,8 @@ class MultiFilePSD:
 
         Returns
         -------
-        tonal_SPL : (N_azim, N_ch)-shape array_like
-            Array of integrated BPF harmonics' SPL per azimuth/file, per
+        tonal_SPL : (N_files, N_ch)-shape array_like
+            Array of integrated BPF harmonics' SPL per file, per
             channel, in dB re 20 uPa RMS.
 
         Notes
@@ -329,10 +327,10 @@ class MultiFilePSD:
         represents 1xBPF, index 1 represents 2xBPF, etc.
         """
 
-        self.tonal_SPL = np.zeros((self.N_azim, self.N_ch))
+        self.tonal_SPL = np.zeros((self.N_files, self.N_ch))
 
-        for az in range(self.N_azim):
-            self.tonal_SPL[az, :] = self.azim_PSDs[az].calc_tonal_SPL()
+        for az in range(self.N_files):
+            self.tonal_SPL[az, :] = self.files_PSDs[az].calc_tonal_SPL()
 
         return self.tonal_SPL
 
