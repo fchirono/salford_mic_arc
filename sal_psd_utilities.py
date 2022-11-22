@@ -21,12 +21,12 @@ from sal_constants import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, DEFAULT_WINDOW
 
 
 # #############################################################################
-# %% Class 'MultiChannelPSD'
+# %% Class 'SingleFilePSD'
 # #############################################################################
 
-class MultiChannelPSD:
+class SingleFilePSD:
     """
-    Class to store multi-channel PSD and associated frequency-domain
+    Class to store single-file, multichannel PSD and associated frequency-domain
     information. PSDs are assumed single-sided.
     """
 
@@ -367,7 +367,7 @@ class MultiChannelPSD:
         """
 
         assert hasattr(self, 'peak_lims'), \
-            "Cannot calculate peaks' SPL: MultiChannelPSD instance does not have attribute 'peak_lims'!"
+            "Cannot calculate peaks' SPL: SingleFilePSD instance does not have attribute 'peak_lims'!"
 
         N_peaks = self.peak_indices.shape[1]
 
@@ -416,7 +416,7 @@ class MultiChannelPSD:
         """
 
         assert hasattr(self, 'peak_lims'),\
-            "Cannot calculate tonal SPL: MultiChannelPSD instance does not have attribute 'peak_lims'!"
+            "Cannot calculate tonal SPL: SingleFilePSD instance does not have attribute 'peak_lims'!"
 
         self.tonal_SPL = np.zeros(self.N_ch)
 
@@ -472,13 +472,13 @@ class MultiFilePSDs:
         Calculates PSDs for all files in list of file names.
         """
 
-        # create list of 'MultiChannelPSD' objects
+        # create list of 'SingleFilePSD' objects
         self.azim_PSDs = []
 
         # calculate PSDs from remaining files
         for az in range(self.N_azim):
 
-            ds_data = SMA.DSRawTimeSeries(self.filenames[az])
+            ds_data = SMA.SingleFileTimeSeries(self.filenames[az])
 
             self.azim_PSDs.append(ds_data.calc_PSDs(Ndft, window, Noverlap))
 

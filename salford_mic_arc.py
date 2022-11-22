@@ -35,14 +35,14 @@ import scipy.signal as ss
 
 from sal_constants import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, DEFAULT_WINDOW
 
-from sal_psd_utilities import MultiChannelPSD
+from sal_psd_utilities import SingleFilePSD
 
 
 # #############################################################################
-# %% Class 'DSRawTimeSeries'
+# %% Class 'SingleFileTimeSeries'
 # #############################################################################
 
-class DSRawTimeSeries:
+class SingleFileTimeSeries:
     """
     Class to read raw measurement data from Dewesoft HDF5 files
     """
@@ -172,7 +172,7 @@ class DSRawTimeSeries:
 
         for name in ch_names:
             assert hasattr(self, name), \
-                "Channel {} does not exist in this DSRawTimeSeries instance!".format(name)
+                "Channel {} does not exist in this SingleFileTimeSeries instance!".format(name)
 
             mean_value = np.mean( getattr(self, name))
             setattr(self, 'mean_' + name, mean_value)
@@ -277,7 +277,7 @@ class DSRawTimeSeries:
                                          window=window, nperseg=Ndft,
                                          noverlap=Noverlap)
 
-        myPSDs = MultiChannelPSD(PSDs, freq, self.fs, Ndft, Noverlap, window)
+        myPSDs = SingleFilePSD(PSDs, freq, self.fs, Ndft, Noverlap, window)
 
         return myPSDs
 
