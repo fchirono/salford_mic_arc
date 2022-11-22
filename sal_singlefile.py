@@ -35,29 +35,39 @@ class SingleFileTimeSeries:
     def __init__(self, filename, mic_channel_names, T=30, fs=50000,
                  other_ch_names=None, fs2=None):
 
+        # name of file to be read (must be HDF5)
         self.filename = filename
+
+        # list of microphone channels' names in 'filename'
         self.mic_channel_names = mic_channel_names
 
         # nominal duration of data recording, in seconds
+        #   float
         self.T = T
 
         # default sampling freq
+        #   float
         self.fs = fs
 
         # time vector
+        #   (T*fs,) array
         self.t = np.linspace(0, self.T - 1/self.fs, self.T*self.fs)
 
         # 2nd sampling freq, for data acquired with SIRIUSiwe STG-M rack unit
         # (e.g. load cell, thermocouple)
         if fs2:
+            #   float
             self.fs2 = fs2
+
+            #   (T*fs2,) array
             self.t2 = np.linspace(0, self.T - 1/self.fs2, self.T*self.fs2)
 
         # read mic data from filename
         self._read_mic_chs(filename, mic_channel_names)
 
-        # if present, read other channels' data from filename
+        # if present, read other channels' data from 'filename'
         if other_ch_names:
+            # list of non-acoustic channels in 'filename'
             self.other_ch_names = other_ch_names
             self._read_other_chs(filename, other_ch_names)
 
