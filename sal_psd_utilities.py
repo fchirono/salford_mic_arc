@@ -369,7 +369,7 @@ class MultiChannelPSD:
         assert hasattr(self, 'peak_lims'), \
             "Cannot calculate peaks' SPL: MultiChannelPSD instance does not have attribute 'peak_lims'!"
 
-        N_peaks = self.peaks.shape[1]
+        N_peaks = self.peak_indices.shape[1]
 
         self.peaks_SPL = np.zeros((self.N_ch, N_peaks))
 
