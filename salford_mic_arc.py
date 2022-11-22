@@ -277,7 +277,8 @@ class SingleFileTimeSeries:
                                          window=window, nperseg=Ndft,
                                          noverlap=Noverlap)
 
-        myPSDs = SingleFilePSD(PSDs, freq, self.fs, Ndft, Noverlap, window)
+        myPSDs = SingleFilePSD(self.filename, PSDs, freq, self.fs, Ndft,
+                               Noverlap, window)
 
         return myPSDs
 

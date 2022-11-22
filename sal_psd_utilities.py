@@ -30,8 +30,11 @@ class SingleFilePSD:
     information. PSDs are assumed single-sided.
     """
 
-    def __init__(self, psd, freq, fs, Ndft=DEFAULT_NDFT,
+    def __init__(self, filename, psd, freq, fs, Ndft=DEFAULT_NDFT,
                  Noverlap=DEFAULT_NOVERLAP, window=DEFAULT_WINDOW):
+
+        # name of file where PSD data originates from
+        self.filename = filename
 
         # Array of Power Spectral Density values (single sided)
         #   (N_mics, Ndft//2+1)-shape array_like
