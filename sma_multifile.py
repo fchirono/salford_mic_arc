@@ -100,14 +100,8 @@ class MultiFileTimeSeries:
 
 
     # *************************************************************************
-    def calc_PSDs(self, Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP,
-                  window=DEFAULT_WINDOW, t0=0):
-        """
-        Calculates and outputs the PSDs of all channels. Optionally, skip
-        initial segment 't0'.
-        """
-        for fi in range(self.N_files):
-            self.files[fi].filter_data(filter_order, fc, btype)
+    def calc_PSDs(self):
+        pass
 
 
 # #############################################################################

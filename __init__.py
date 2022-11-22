@@ -33,9 +33,9 @@ import soundfile as sf
 import scipy.signal as ss
 
 
-from sal_constants import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, DEFAULT_WINDOW
+from sma_constants import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, DEFAULT_WINDOW
 
-from sal_singlefile import SingleFileTimeSeries, SingleFilePSD
-from sal_multifile import MultiFileTimeSeries, MultiFilePSD
+from sma_singlefile import SingleFileTimeSeries, SingleFilePSD
+from sma_multifile import MultiFileTimeSeries, MultiFilePSD
 
 
