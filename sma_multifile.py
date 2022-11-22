@@ -100,7 +100,7 @@ class MultiFileTimeSeries:
 
 
     # *************************************************************************
-    def calc_PSDs(self):
+    def calc_PSD(self):
         pass
 
 
@@ -108,7 +108,7 @@ class MultiFileTimeSeries:
 # %% Class 'MultiFilePSDs'
 # #############################################################################
 
-class MultiFilePSDs:
+class MultiFilePSD:
     """
     Class to store post-processed frequency-domain power spectral density data
     from multiple files, collected over a list of azimuthal angles.
