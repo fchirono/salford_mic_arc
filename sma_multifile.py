@@ -44,7 +44,7 @@ class MultiFileTimeSeries:
 
         # list of microphone channels' names in all files
         self.mic_channel_names = mic_channel_names
-        self.N_ch = len(self.mic_ch_names)
+        self.N_ch = len(self.mic_channel_names)
 
         # nominal duration of data recording, in seconds
         #   float
@@ -86,7 +86,7 @@ class MultiFileTimeSeries:
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
         # copy mic data from individual files
-        self.mic_data =
+        #self.mic_data =
 
 
 
