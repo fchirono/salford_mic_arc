@@ -40,6 +40,7 @@ class SingleFileTimeSeries:
 
         # list of microphone channels' names in 'filename'
         self.mic_channel_names = mic_channel_names
+        self.N_ch = len(self.mic_ch_names)
 
         # nominal duration of data recording, in seconds
         #   float
@@ -105,8 +106,6 @@ class SingleFileTimeSeries:
             assert set(mic_ch_names).issubset(channel_names), \
                 "Channel named {} does not exist in this hdf5 file!"
 
-            # read number of mic channels
-            self.N_ch = len(mic_ch_names)
             self.mic_data = np.zeros((self.N_ch, self.T*self.fs))
 
             # read mic data from HDF5 file
