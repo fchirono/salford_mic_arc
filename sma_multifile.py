@@ -143,6 +143,7 @@ class MultiFilePSD:
         self.calc_PSDs(Ndft, window, Noverlap)
 
 
+    # *************************************************************************
     def calc_PSDs(self, Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP,
                   window=DEFAULT_WINDOW):
         """
@@ -167,6 +168,7 @@ class MultiFilePSD:
         self.freq = self.files_PSDs[0].freq
 
 
+    # *************************************************************************
     def calc_broadband_SPL(self, f_low, f_high, kernel_size=100, units='Hz'):
         """
         Calculates the broadband SPL within a frequency band ['f_low', 'f_high']
@@ -205,6 +207,7 @@ class MultiFilePSD:
         return self.broadband_SPL
 
 
+    # *************************************************************************
     def calc_overall_SPL(self, f_low, f_high):
         """
         Calculates the overall SPL within a frequency band ['f_low', 'f_high']
@@ -235,6 +238,7 @@ class MultiFilePSD:
         return self.overall_SPL
 
 
+    # *************************************************************************
     def find_peaks(self, f_low, f_high, dB_above_broadband=3):
         """
         Finds peaks in PSD spectrum within a bandwidth [f_low, f_high]. Peaks
@@ -293,6 +297,7 @@ class MultiFilePSD:
         return self.peak_indices, self.peak_lims
 
 
+    # *************************************************************************
     def calc_peaks_SPL(self):
         """
         Returns an array of peaks' levels per file, per channel, in
@@ -324,6 +329,7 @@ class MultiFilePSD:
         return self.peaks_SPL
 
 
+    # *************************************************************************
     def calc_tonal_SPL(self):
         """
         Returns the tonal SPL per file, per channel, as the sum of all
@@ -353,6 +359,7 @@ class MultiFilePSD:
         return self.tonal_SPL
 
 
+    # *************************************************************************
     def az_elev_to_polar(self, spl_name, combine_90deg=False):
         """
         Calculates the polar directivity pattern for a given SPL calculation
