@@ -84,11 +84,6 @@ class MultiFileTimeSeries:
                                         self.fs2)
             self.files.append(file)
 
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-        # copy mic data from individual files
-        #self.mic_data =
-
-
 
     # *************************************************************************
     def filter_data(self, filter_order=3, fc=50, btype='highpass'):
@@ -103,6 +98,25 @@ class MultiFileTimeSeries:
             self.files[fi].filter_data(filter_order, fc, btype)
 
 
+    # *************************************************************************
+    def calc_channel_mean(self, ch_names):
+        """
+        Iterates over a list of channel names and calculates their mean value
+        over time. Generally used for non-acoustic data - e.g. temperature,
+        load cells, etc. (Wrapper method for 'calc_channel_mean' of each
+        'SingleFileTimeSeries' instance.)
+        """
+
+        # iterates over list of files
+        for fi in range(self.N_files):
+            self.files[fi].calc_channel_mean(ch_names)
+
+        for name in ch_names:
+            attr_values = np.zeros(self.N_files)
+            for fi in range(self.N_files):
+                attr_values[fi] = getattr(self.files[fi], 'mean_'+name)
+
+            setattr(self, 'mean_' + name, attr_values)
 
 # #############################################################################
 # %% Class 'MultiFilePSDs'
