@@ -147,7 +147,7 @@ class SingleFileTimeSeries:
 
 
     # *************************************************************************
-    def calc_chs_mean(self, ch_names):
+    def calc_channel_mean(self, ch_names):
         """
         Iterates over a list of channel names and calculates their mean value
         over time. Generally used for non-acoustic data - e.g. temperature,
