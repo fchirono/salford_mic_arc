@@ -44,6 +44,7 @@ class MultiFileTimeSeries:
 
         # list of microphone channels' names in all files
         self.mic_channel_names = mic_channel_names
+        self.N_ch = len(self.mic_ch_names)
 
         # nominal duration of data recording, in seconds
         #   float
@@ -84,6 +85,9 @@ class MultiFileTimeSeries:
             self.files.append(file)
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+        # copy mic data from individual files
+        self.mic_data =
+
 
 
     # *************************************************************************
@@ -180,9 +184,9 @@ class MultiFilePSD:
 
         self.broadband_SPL = np.zeros((self.N_files, self.N_ch))
 
-        for az in range(self.N_files):
-            self.files_PSDs[az].calc_broadband_PSD(kernel_size, units)
-            self.broadband_SPL[az, :] = self.files_PSDs[az].calc_broadband_SPL(f_low, f_high)
+        for n in range(self.N_files):
+            self.files_PSDs[n].calc_broadband_PSD(kernel_size, units)
+            self.broadband_SPL[n, :] = self.files_PSDs[n].calc_broadband_SPL(f_low, f_high)
 
         return self.broadband_SPL
 
@@ -211,8 +215,8 @@ class MultiFilePSD:
 
         self.overall_SPL = np.zeros((self.N_files, self.N_ch))
 
-        for az in range(self.N_files):
-            self.overall_SPL[az, :] = self.files_PSDs[az].calc_overall_SPL(f_low, f_high)
+        for n in range(self.N_files):
+            self.overall_SPL[n, :] = self.files_PSDs[n].calc_overall_SPL(f_low, f_high)
 
         return self.overall_SPL
 
@@ -254,13 +258,13 @@ class MultiFilePSD:
         self.peak_lims = np.zeros((self.N_files, self.N_ch, self.Ndft//2+1, 2),
                                   dtype=int)
 
-        for az in range(self.N_files):
-            self.files_PSDs[az].find_peaks(f_low, f_high, dB_above_broadband)
+        for n in range(self.N_files):
+            self.files_PSDs[n].find_peaks(f_low, f_high, dB_above_broadband)
 
-            N_peaks = self.files_PSDs[az].peak_indices.shape[1]
+            N_peaks = self.files_PSDs[n].peak_indices.shape[1]
 
-            self.peak_indices[az, :, :N_peaks] = self.files_PSDs[az].peak_indices
-            self.peak_lims[az, :, :N_peaks, :] = self.files_PSDs[az].peak_lims
+            self.peak_indices[n, :, :N_peaks] = self.files_PSDs[n].peak_indices
+            self.peak_lims[n, :, :N_peaks, :] = self.files_PSDs[n].peak_lims
 
             N_peaks_max = np.max([N_peaks_max, N_peaks])
 
@@ -299,9 +303,9 @@ class MultiFilePSD:
 
         self.peaks_SPL = np.zeros((self.N_files, self.N_ch, N_peaks))
 
-        for az in range(self.N_files):
+        for n in range(self.N_files):
 
-            self.peaks_SPL[az, :, :] = self.files_PSDs[az].calc_peaks_SPL()
+            self.peaks_SPL[n, :, :] = self.files_PSDs[n].calc_peaks_SPL()
 
         return self.peaks_SPL
 
@@ -329,8 +333,8 @@ class MultiFilePSD:
 
         self.tonal_SPL = np.zeros((self.N_files, self.N_ch))
 
-        for az in range(self.N_files):
-            self.tonal_SPL[az, :] = self.files_PSDs[az].calc_tonal_SPL()
+        for n in range(self.N_files):
+            self.tonal_SPL[n, :] = self.files_PSDs[n].calc_tonal_SPL()
 
         return self.tonal_SPL
 
