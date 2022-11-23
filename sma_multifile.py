@@ -360,7 +360,7 @@ class MultiFilePSD:
 
 
     # *************************************************************************
-    def az_elev_to_polar(self, spl_name, combine_90deg=False):
+    def SPL_to_polar(self, spl_name, combine_90deg=False):
         """
         Calculates the polar directivity pattern for a given SPL calculation
         by combining measurements made at (azim, elev) = (0, 0-90) and
@@ -402,7 +402,7 @@ class MultiFilePSD:
             0 and 180deg elevation, and all except 90deg are equally spaced.
         """
 
-        spl_names_list = ['oa_SPL', 'broadband_SPL', 'tonal_SPL']
+        spl_names_list = ['overall_SPL', 'broadband_SPL', 'tonal_SPL']
         assert spl_name in spl_names_list, "'spl_name' not recognized!"
 
         SPL_az_elev = getattr(self, spl_name)
