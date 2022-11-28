@@ -58,8 +58,10 @@ other_chs = ['RPM', 'RevCounter', 'LoadCell1']
 
 # %% read raw data from Dewesoft HDF5 file using 'SingleFileRotor' class
 
+# 'SingleFileRotor' class requires number of blades and blade radius
 N_blades = 8
 R_blades = 0.145
+
 ipm_data = SMA.SingleFileRotor(ipm_filename, N_blades, R_blades, mic_chs,
                                T=30, fs=50000,
                                other_ch_names=other_chs, fs2=12500)
