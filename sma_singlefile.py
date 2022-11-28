@@ -366,7 +366,8 @@ def SingleFileRotor(SingleFileTimeSeries):
 
 
     # *************************************************************************
-    # Setters for RPM / shaft freq / BPF / blade tip Mach number
+    # Setter methods for RPM / shaft freq / BPF / blade tip Mach number
+
     def set_RPM(self, rpm):
         """
         Setter method for rotor RPM. Also writes shaft freq, BPF, and Mtip.
@@ -499,6 +500,28 @@ def SingleFileRotor(SingleFileTimeSeries):
         names = ['Overall', '1xBPF', '2xBPF', '3xBPF']
 
         return time, levels, names
+
+
+    # *************************************************************************
+    def calc_PSDs(self, Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP,
+                  window=DEFAULT_WINDOW, t0=0):
+        """
+        Calculates and outputs the PSDs of all channels. Optionally, skip
+        initial segment 't0'.
+        """
+        # use 'calc_PSDs' from parent class 'SingleFileTimeSeries'
+        myPSDs = super().calc_PSDs(Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP,
+                                   window=DEFAULT_WINDOW, t0=t0)
+
+        # copy additional attributes to newly created 'SingleFilePSD' instance
+        myPSDs.N_blades = self.N_blades
+        myPSDs.R_blades = self.R_blades
+        myPSDs.rpm = self.rpm
+        myPSDs.f_shaft = self.f_shaft
+        myPSDs.bpf = self.bpf
+        myPSDs.Mtip = self.Mtip
+
+        return myPSDs
 
 
 # #############################################################################
