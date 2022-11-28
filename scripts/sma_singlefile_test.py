@@ -44,8 +44,8 @@ mic_chs = ['Mic_00deg',
 other_chs = ['RPM', 'RevCounter', 'LoadCell1']
 
 
-# *****************************************************************************
-# read raw time series from Dewesoft HDF5 file
+
+# %% read raw data from Dewesoft HDF5 file using 'SingleFileTimeSeries' class
 
 # ipm_data = SMA.SingleFileTimeSeries(ipm_filename, mic_chs, T=30, fs=50000,
 #                                     other_ch_names=other_chs, fs2=12500)
@@ -56,8 +56,7 @@ other_chs = ['RPM', 'RevCounter', 'LoadCell1']
 # print("Mean RPM : {:.1f} ".format(ipm_data.mean_RPM))
 
 
-# *****************************************************************************
-# use 'SingleFileRotor' class instead
+# %% read raw data from Dewesoft HDF5 file using 'SingleFileRotor' class
 
 N_blades = 8
 R_blades = 0.145
@@ -73,6 +72,7 @@ print("Mean RPM : {:.1f} ".format(ipm_data.mean_RPM))
 
 # set RPM from average value in 'RPM' channel
 ipm_data.set_RPM(ipm_data.mean_RPM)
+
 
 # %% optional tasks: filter data, estimate peak frequency location, export mic
 # signals as .WAV files
