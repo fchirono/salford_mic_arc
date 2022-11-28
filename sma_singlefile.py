@@ -342,6 +342,166 @@ class SingleFileTimeSeries:
 
 
 # #############################################################################
+# %% Class 'SingleFileRotor'
+# #############################################################################
+
+def SingleFileRotor(SingleFileTimeSeries):
+    """
+    Specialized class for analysing measurements of aircraft propulsion devices
+    such as rotors, propellers, fans, etc. Requires extra input arguments
+    'N_blades' and 'R_blades'.
+    """
+
+    def __init__(self, filename, N_blades, R_blades, mic_channel_names, T=30,
+                 fs=50000, other_ch_names=None, fs2=None):
+
+        # Initialize superclass
+        super().__init__(filename, mic_channel_names, T, fs, other_ch_names, fs2)
+
+        # Number of rotor blades
+        self.N_blades = N_blades
+
+        # Radius of rotor blades [m]
+        self.R_blades = R_blades
+
+
+    # *************************************************************************
+    # Setters for RPM / shaft freq / BPF / blade tip Mach number
+    def set_RPM(self, rpm):
+        """
+        Setter method for rotor RPM. Also writes shaft freq, BPF, and Mtip.
+        """
+
+        # Rotations per minute
+        self.rpm = rpm
+
+        # shaft frequency [Hz]
+        self.f_shaft = self.rpm/60
+
+        # Blade passing frequency [Hz]
+        self.bpf = self.f_shaft*self.N_blades
+
+        # blade tip Mach number
+        self.Mtip = rpm_to_Mtip(rpm)
+
+
+    def set_fshaft(self, f_shaft):
+        """
+        Setter method for rotor shaft freq. Also writes RPM, BPF, and Mtip.
+        """
+        # shaft frequency [Hz]
+        self.f_shaft = f_shaft
+
+        # Rotations per minute
+        self.rpm = self.f_shaft*60
+
+        # Blade passing frequency [Hz]
+        self.bpf = self.f_shaft*self.N_blades
+
+        # blade tip Mach number
+        self.Mtip = rpm_to_Mtip(self.rpm)
+
+
+    def rpm_to_Mtip(self, rpm, c0=340):
+        """Converts RPM to blade tip Mach number, where 'R' is the blade
+        radius."""
+
+        v_tip = 2*np.pi*self.R_blades*(rpm/60)
+
+        return v_tip/c0
+
+
+    # *************************************************************************
+    def test_flow_recirc(self, ch, bin_width=3, Ndft=DEFAULT_NDFT,
+                         Noverlap=DEFAULT_NOVERLAP, window=DEFAULT_WINDOW):
+        """
+        Calculates Overall, BPF, BPFx2, and BPFx3 levels over time from
+        single-channel spectrogram data to assess flow recirculation effects.
+
+        Parameters
+        ----------
+        ch : int
+            Channel index to test for flow recirculation
+
+        bin_width : int, optional
+            Bandwidth of integration for BPF harmonics, in number of frequency
+            bins. Default is 3 bins.
+
+        Ndft : int, optional
+            Length of DFT for creating the spectrogram, in samples. Default is
+            2^13, and is set in 'sma_consts_aux.py' file.
+
+        Ndft : int, optional
+            Length of DFT segment for creating the spectrogram, in samples.
+            Default is 2^13, and is set in 'sma_consts_aux.py' file.
+
+        Noverlap : int, optional
+            Length of segment overlap for creating the spectrogram, in samples.
+            Default is 2^12 (Ndft/2), and is set in 'sma_consts_aux.py' file.
+
+        window : str, optional
+            Name of window type to use in spectrogram. This is passed to
+            'scipy.signal.spectrogram', so any known Scipy window functions are
+            accepted. Default is 'hann'.
+
+
+        Returns
+        -------
+        time: (N_seg,)-shaped array_type
+            Numpy array containing the initial times of each segment.
+
+        levels: (4, N_seg)-shaped array_type
+            Numpy array containing the integrated power of each signal metric
+            (i.e. Overall, BPF, 2xBPF, 3xBPF) at each segment.
+
+        names : list
+            List of names of each signal metric.
+
+
+        Notes
+        -----
+        This method works by showing possible changes in the recorded signal
+        levels when a propulsor unit goes from off to a desired RPM. If flow
+        recirculation is present, turbulent air in the device exhaust gets
+        reingested at the inlet after some time, and this is evidenced by an
+        increase in BPF harmonics' levels a few seconds after the unit is
+        turned on. If no noticeable change in BPF levels is seen, it is assumed
+        there is no flow recirculation under the conditions tested.
+
+        The BPF harmonics' levels are calculated by finding the frequency bin
+        closest to the actual BPF harmonic, and integrating the acoustic
+        spectrum within +- 'bin_width'. Hence, if 'freq_bpf=10' and
+        'bin_width=2', we sum the spectrum values within bins 8 and 12
+        (inclusive).
+        """
+
+        assert hasattr(self, 'bpf'), \
+            "Cannot assess flow recirculation effects - 'SingleFileRotor' instance has no attribute 'bpf'!"
+
+        freq, time, Sxx = ss.spectrogram(self.mic_data[ch, :], self.fs,
+                                         window=window, nperseg=Ndft,
+                                         noverlap=Noverlap)
+        df = freq[1]
+
+        levels = np.zeros((4, time.shape[0]))
+
+        # find frequency index for BPF
+        freq_bpf = np.argmin(np.abs(freq - self.bpf))
+
+        # overall level
+        levels[0, :] = np.sum(Sxx, axis=0)*df
+
+        # BPF and harmonics levels
+        levels[1,:] = np.sum(Sxx[freq_bpf-bin_width : freq_bpf+bin_width+1, :], axis=0)*df
+        levels[2,:] = np.sum(Sxx[2*freq_bpf-bin_width : 2*freq_bpf+bin_width+1, :], axis=0)*df
+        levels[3,:] = np.sum(Sxx[3*freq_bpf-bin_width : 3*freq_bpf+bin_width+1, :], axis=0)*df
+
+        names = ['Overall', '1xBPF', '2xBPF', '3xBPF']
+
+        return time, levels, names
+
+
+# #############################################################################
 # %% Class 'SingleFilePSD'
 # #############################################################################
 
