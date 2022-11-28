@@ -510,8 +510,7 @@ class SingleFileRotor(SingleFileTimeSeries):
         initial segment 't0'.
         """
         # use 'calc_PSDs' from parent class 'SingleFileTimeSeries'
-        myPSDs = super().calc_PSDs(Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP,
-                                   window=DEFAULT_WINDOW, t0=t0)
+        myPSDs = super().calc_PSDs(Ndft, Noverlap, window, t0)
 
         # copy additional attributes to newly created 'SingleFilePSD' instance
         myPSDs.N_blades = self.N_blades
