@@ -44,15 +44,35 @@ mic_chs = ['Mic_00deg',
 other_chs = ['RPM', 'RevCounter', 'LoadCell1']
 
 
+# *****************************************************************************
 # read raw time series from Dewesoft HDF5 file
-ipm_data = SMA.SingleFileTimeSeries(ipm_filename, mic_chs, T=30, fs=50000,
-                                    other_ch_names=other_chs, fs2=12500)
+
+# ipm_data = SMA.SingleFileTimeSeries(ipm_filename, mic_chs, T=30, fs=50000,
+#                                     other_ch_names=other_chs, fs2=12500)
+
+# # calculate mean value of channels listed in 'other_chs'
+# ipm_data.calc_channel_mean(other_chs)
+# print("Mean thrust : {:.2f} N".format(ipm_data.mean_LoadCell1))
+# print("Mean RPM : {:.1f} ".format(ipm_data.mean_RPM))
+
+
+# *****************************************************************************
+# use 'SingleFileRotor' class instead
+
+N_blades = 8
+R_blades = 0.145
+ipm_data = SMA.SingleFileRotor(ipm_filename, N_blades, R_blades, mic_chs,
+                               T=30, fs=50000,
+                               other_ch_names=other_chs, fs2=12500)
 
 
 # calculate mean value of channels listed in 'other_chs'
 ipm_data.calc_channel_mean(other_chs)
 print("Mean thrust : {:.2f} N".format(ipm_data.mean_LoadCell1))
 print("Mean RPM : {:.1f} ".format(ipm_data.mean_RPM))
+
+# set RPM from average value in 'RPM' channel
+ipm_data.set_RPM(ipm_data.mean_RPM)
 
 # %% optional tasks: filter data, estimate peak frequency location, export mic
 # signals as .WAV files
