@@ -345,7 +345,7 @@ class SingleFileTimeSeries:
 # %% Class 'SingleFileRotor'
 # #############################################################################
 
-def SingleFileRotor(SingleFileTimeSeries):
+class SingleFileRotor(SingleFileTimeSeries):
     """
     Specialized class for analysing measurements of aircraft propulsion devices
     such as rotors, propellers, fans, etc. Requires extra input arguments
@@ -383,7 +383,7 @@ def SingleFileRotor(SingleFileTimeSeries):
         self.bpf = self.f_shaft*self.N_blades
 
         # blade tip Mach number
-        self.Mtip = rpm_to_Mtip(rpm)
+        self.Mtip = self.rpm_to_Mtip(rpm)
 
 
     def set_fshaft(self, f_shaft):
@@ -400,7 +400,7 @@ def SingleFileRotor(SingleFileTimeSeries):
         self.bpf = self.f_shaft*self.N_blades
 
         # blade tip Mach number
-        self.Mtip = rpm_to_Mtip(self.rpm)
+        self.Mtip = self.rpm_to_Mtip(self.rpm)
 
 
     def rpm_to_Mtip(self, rpm, c0=340):
