@@ -45,6 +45,8 @@ class MultiFileTimeSeries:
         self.filenames = input_files.filenames
         self.N_files = len(self.filenames)
 
+        self.is_rotor = input_files.is_rotor
+
         # list of microphone channels' names in all files
         self.mic_channel_names = input_files.mic_channel_names
         self.N_ch = len(self.mic_channel_names)
@@ -117,10 +119,6 @@ class MultiFileTimeSeries:
         'SingleFileTimeSeries' instance.)
         """
 
-        # # iterates over list of files - already done in SingleFileTimeSeries init
-        # for fi in range(self.N_files):
-        #     self.files[fi].calc_channel_mean(ch_names)
-
         for name in ch_names:
             attr_values = np.zeros(self.N_files)
             for fi in range(self.N_files):
@@ -146,9 +144,8 @@ class MultiFilePSD:
             "Input argument is not instance of 'InputFiles'!"
 
         self.filenames = input_files.filenames
+        self.is_rotor = input_files.is_rotor
         self.N_files = len(self.filenames)
-
-        self.mic_channel_names = input_files.mic_channel_names
 
         self.Ndft = Ndft
         self.window = window

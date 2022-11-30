@@ -70,15 +70,14 @@ ipm_inputfile.set_sampling_freq(fs)
 ipm_inputfile.set_sampling_freq2(fs2)
 
 # if using SingleFileRotorTime class, set rotor metadata
+ipm_inputfile.is_rotor = True
 ipm_inputfile.set_N_blades(N_blades)
 ipm_inputfile.set_R_blades(R_blades)
 ipm_inputfile.set_rpm_attr_name(rpm_name)
 
-# %% read raw data from Dewesoft HDF5 file using either 'SingleFileTimeSeries'
-# class or 'SingleFileRotorTime' class
+# %% read raw data from Dewesoft HDF5 file using 'SingleFileTimeSeries' class
 
-# ipm_data = SMA.SingleFileTimeSeries(ipm_inputfile)
-ipm_data = SMA.SingleFileRotorTime(ipm_inputfile)
+ipm_data = SMA.SingleFileTimeSeries(ipm_inputfile)
 
 # calculate mean value of channels listed in 'other_chs'
 print("Mean thrust : {:.2f} N".format(ipm_data.mean_LoadCell1))
@@ -106,7 +105,7 @@ f_bpf = ipm_data.estimate_peak_freq(f_low=750, f_high=850, Ndft=2**14)
 f_low = 150
 f_high = 10000
 
-ipm_PSD = ipm_data.calc_PSDs()
+ipm_PSD = ipm_data.calc_PSDs(Ndft=2**13, Noverlap=2**12, window='hann')
 
 
 # calculate broadband component of PSD

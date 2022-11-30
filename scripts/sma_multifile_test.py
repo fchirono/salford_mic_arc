@@ -73,6 +73,7 @@ ipm_inputfiles.set_sampling_freq(fs)
 ipm_inputfiles.set_sampling_freq2(fs2)
 
 # if using SingleFileRotorTime class, set rotor metadata
+ipm_inputfiles.set_is_rotor(True)
 ipm_inputfiles.set_N_blades(N_blades)
 ipm_inputfiles.set_R_blades(R_blades)
 ipm_inputfiles.set_rpm_attr_name(rpm_name)
