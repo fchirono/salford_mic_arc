@@ -173,6 +173,25 @@ class SingleFileTimeSeries:
             self._read_other_chs(self.filename, self.other_ch_names)
             self.calc_channel_mean(self.other_ch_names)
 
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+        # check if input data belongs to rotor (propellers, fans) measurement
+        if input_file.is_rotor:
+
+            self.is_rotor = True
+
+            # Number of rotor blades
+            #   int
+            self.N_blades = input_file.N_blades
+
+            # Radius of rotor blades [m]
+            #   float
+            self.R_blades = input_file.R_blades
+
+            # Name of attribute containing RPM value
+            #   if None, RPM must be set manually using 'set_RPM'
+            if input_file.rpm_attr_name:
+                self.set_RPM(getattr(self, input_file.rpm_attr_name))
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
     # *************************************************************************
     def _read_mic_chs(self, filename, mic_ch_names):
@@ -212,7 +231,6 @@ class SingleFileTimeSeries:
             # read mic data from HDF5 file
             for ch_index, ch_name in enumerate(mic_ch_names):
                 self.mic_data[ch_index, :rec_length] = h5file[ch_name][:, 1]
-
             # -----------------------------------------------------------------
 
 
@@ -374,102 +392,17 @@ class SingleFileTimeSeries:
         myPSDs = SingleFilePSD(self.filename, PSDs, freq, self.fs, Ndft,
                                Noverlap, window)
 
+        # if file is a rotor measurement, copy rotor-related attributes to
+        # 'SingleFilePSD' instance
+        if self.is_rotor:
+            myPSDs.N_blades = self.N_blades
+            myPSDs.R_blades = self.R_blades
+            myPSDs.rpm = self.rpm
+            myPSDs.f_shaft = self.f_shaft
+            myPSDs.bpf = self.bpf
+            myPSDs.Mtip = self.Mtip
+
         return myPSDs
-
-
-    # *************************************************************************
-    def export_wavs(self, wav_filename, channels=10, subtype='FLOAT'):
-        """
-        Exports current 'mic_data' time series as a multichannel .WAV file.
-        Requires 'soundfile' (previously 'pysoundfile') package.
-
-        Parameters
-        ----------
-        wav_filename : string
-            File name of multichannel .wav file.
-
-        channels : int or list, optional
-            Channels to output. If 'int', outputs this many channels in
-            ascending order; if list, output channel values contained in list,
-            in the given order.
-
-        subtype : string, optional
-            String defining .wav file subtype. Use
-            'soundfile.available_subtypes()' to list current options. Default
-            value is 'FLOAT' for 32-bit float.
-
-        Returns
-        -------
-        None.
-
-        Notes
-        -----
-        Maximum value allowed in 'channels' is 10.
-
-        If 'channel=8', the output will be a 8-channel .wav file containing
-        data from mics index 0 to 7.
-
-        If 'channels=[2, 6, 5]', the output will be a 3-channel .wav file
-        containing data from mics 2, 6 and 5, in that order.
-        """
-
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-        # check all mic values are <=1, print warning if not
-        if not (np.abs(self.mic_data)<=1).all():
-            print("WARNING: Some microphone signal amplitudes are above unity!")
-
-        # checks filename ends in '.wav' extension, add if it doesn't
-        if wav_filename[-4:] != '.wav':
-            wav_filename += '.wav'
-
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-        # check whether 'channels' is int, if so create channel list
-        if isinstance(channels, int):
-            assert channels<=10, \
-                "If int, 'channels' must be equal to or less than 10!"
-            ch_list = [n for n in range(channels)]
-
-        # if channels is list/np array, copy as is
-        elif isinstance(channels, (list, np.ndarray)):
-            assert all(ch<10 for ch in channels), \
-                "If list, channel indices must be less than 10!"
-            ch_list = channels.copy()
-
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-        # write .wav file, up to 'n_channels'
-        sf.write(wav_filename, self.mic_data[ch_list].T, self.fs,
-                 subtype)
-        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-
-
-# #############################################################################
-# %% Class 'SingleFileRotorTime'
-# #############################################################################
-
-class SingleFileRotorTime(SingleFileTimeSeries):
-    """
-    Specialized class for analysing measurements of aircraft propulsion devices
-    such as rotors, propellers, fans, etc. Requires extra input arguments
-    'N_blades' and 'R_blades', and optional argument 'rpm_attr_name'.
-    """
-
-    def __init__(self, input_file):
-
-        # Initialize superclass
-        super().__init__(input_file)
-
-        # Number of rotor blades
-        #   int
-        self.N_blades = input_file.N_blades
-
-        # Radius of rotor blades [m]
-        #   float
-        self.R_blades = input_file.R_blades
-
-        # Name of attribute containing RPM value
-        #   if None, RPM must be set manually using 'set_RPM'
-        if input_file.rpm_attr_name:
-            self.set_RPM(getattr(self, input_file.rpm_attr_name))
 
 
     # *************************************************************************
@@ -513,8 +446,7 @@ class SingleFileRotorTime(SingleFileTimeSeries):
 
 
     def rpm_to_Mtip(self, rpm, c0=340):
-        """Converts RPM to blade tip Mach number, where 'R' is the blade
-        radius."""
+        """Converts RPM to blade tip Mach number"""
 
         v_tip = 2*np.pi*self.R_blades*(rpm/60)
 
@@ -612,25 +544,68 @@ class SingleFileRotorTime(SingleFileTimeSeries):
 
 
     # *************************************************************************
-    def calc_PSDs(self, Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP,
-                  window=DEFAULT_WINDOW, t0=0):
+    def export_wavs(self, wav_filename, channels=10, subtype='FLOAT'):
         """
-        Calculates and outputs the PSDs of all channels. Optionally, skip
-        initial segment 't0'.
+        Exports current 'mic_data' time series as a multichannel .WAV file.
+        Requires 'soundfile' (previously 'pysoundfile') package.
+
+        Parameters
+        ----------
+        wav_filename : string
+            File name of multichannel .wav file.
+
+        channels : int or list, optional
+            Channels to output. If 'int', outputs this many channels in
+            ascending order; if list, output channel values contained in list,
+            in the given order.
+
+        subtype : string, optional
+            String defining .wav file subtype. Use
+            'soundfile.available_subtypes()' to list current options. Default
+            value is 'FLOAT' for 32-bit float.
+
+        Returns
+        -------
+        None.
+
+        Notes
+        -----
+        Maximum value allowed in 'channels' is 10.
+
+        If 'channel=8', the output will be a 8-channel .wav file containing
+        data from mics index 0 to 7.
+
+        If 'channels=[2, 6, 5]', the output will be a 3-channel .wav file
+        containing data from mics 2, 6 and 5, in that order.
         """
 
-        # use 'calc_PSDs' from parent class 'SingleFileTimeSeries'
-        myPSDs = super().calc_PSDs(Ndft, Noverlap, window, t0)
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+        # check all mic values are <=1, print warning if not
+        if not (np.abs(self.mic_data)<=1).all():
+            print("WARNING: Some microphone signal amplitudes are above unity!")
 
-        # copy additional attributes to newly created 'SingleFilePSD' instance
-        myPSDs.N_blades = self.N_blades
-        myPSDs.R_blades = self.R_blades
-        myPSDs.rpm = self.rpm
-        myPSDs.f_shaft = self.f_shaft
-        myPSDs.bpf = self.bpf
-        myPSDs.Mtip = self.Mtip
+        # checks filename ends in '.wav' extension, add if it doesn't
+        if wav_filename[-4:] != '.wav':
+            wav_filename += '.wav'
 
-        return myPSDs
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+        # check whether 'channels' is int, if so create channel list
+        if isinstance(channels, int):
+            assert channels<=10, \
+                "If int, 'channels' must be equal to or less than 10!"
+            ch_list = [n for n in range(channels)]
+
+        # if channels is list/np array, copy as is
+        elif isinstance(channels, (list, np.ndarray)):
+            assert all(ch<10 for ch in channels), \
+                "If list, channel indices must be less than 10!"
+            ch_list = channels.copy()
+
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+        # write .wav file, up to 'n_channels'
+        sf.write(wav_filename, self.mic_data[ch_list].T, self.fs,
+                 subtype)
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
 
 # #############################################################################

@@ -70,15 +70,14 @@ ipm_inputfile.set_sampling_freq(fs)
 ipm_inputfile.set_sampling_freq2(fs2)
 
 # if using SingleFileRotorTime class, set rotor metadata
+ipm_inputfile.is_rotor = True
 ipm_inputfile.set_N_blades(N_blades)
 ipm_inputfile.set_R_blades(R_blades)
 ipm_inputfile.set_rpm_attr_name(rpm_name)
 
-# %% read raw data from Dewesoft HDF5 file using either 'SingleFileTimeSeries'
-# class or 'SingleFileRotorTime' class
+# %% read raw data from Dewesoft HDF5 file using 'SingleFileTimeSeries' class
 
-# ipm_data = SMA.SingleFileTimeSeries(ipm_inputfile)
-ipm_data = SMA.SingleFileRotorTime(ipm_inputfile)
+ipm_data = SMA.SingleFileTimeSeries(ipm_inputfile)
 
 # calculate mean value of channels listed in 'other_chs'
 print("Mean thrust : {:.2f} N".format(ipm_data.mean_LoadCell1))
