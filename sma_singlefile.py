@@ -344,10 +344,10 @@ class SingleFileTimeSeries:
 
 
 # #############################################################################
-# %% Class 'SingleFileRotor'
+# %% Class 'SingleFileRotorTime'
 # #############################################################################
 
-class SingleFileRotor(SingleFileTimeSeries):
+class SingleFileRotorTime(SingleFileTimeSeries):
     """
     Specialized class for analysing measurements of aircraft propulsion devices
     such as rotors, propellers, fans, etc. Requires extra input arguments
@@ -479,7 +479,7 @@ class SingleFileRotor(SingleFileTimeSeries):
         """
 
         assert hasattr(self, 'bpf'), \
-            "Cannot assess flow recirculation effects - 'SingleFileRotor' instance has no attribute 'bpf'!"
+            "Cannot assess flow recirculation effects - 'SingleFileRotorTime' instance has no attribute 'bpf'!"
 
         freq, time, Sxx = ss.spectrogram(self.mic_data[ch, :], self.fs,
                                          window=window, nperseg=Ndft,

@@ -55,15 +55,15 @@ other_chs = ['RPM', 'RevCounter', 'LoadCell1']
 # print("Mean RPM : {:.1f} ".format(ipm_data.mean_RPM))
 
 
-# %% read raw data from Dewesoft HDF5 file using 'SingleFileRotor' class
+# %% read raw data from Dewesoft HDF5 file using 'SingleFileRotorTime' class
 
-# 'SingleFileRotor' class requires number of blades and blade radius
+# 'SingleFileRotorTime' class requires number of blades and blade radius
 N_blades = 8
 R_blades = 0.145
 
-ipm_data = SMA.SingleFileRotor(ipm_filename, N_blades, R_blades, mic_chs,
-                               T=30, fs=50000,
-                               other_ch_names=other_chs, fs2=12500)
+ipm_data = SMA.SingleFileRotorTime(ipm_filename, N_blades, R_blades, mic_chs,
+                                   T=30, fs=50000,
+                                   other_ch_names=other_chs, fs2=12500)
 
 
 # print mean value of channels listed in 'other_chs'
