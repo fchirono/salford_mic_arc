@@ -62,7 +62,6 @@ class InputFile:
         #   float
         self.fs2 = fs2
 
-
     def set_N_blades(self, N_blades):
         # For measurements using rotating devices: number of rotor blades
         #   int
@@ -85,23 +84,24 @@ class SingleFileTimeSeries:
     """
 
     # *************************************************************************
-    def __init__(self, filename, mic_channel_names, T=30, fs=50000,
-                 other_ch_names=None, fs2=None):
+    def __init__(self, input_file):
+
+        assert isinstance(input_file, InputFile), "Input argument is not instance of 'InputFile'!"
 
         # name of file to be read (must be HDF5)
-        self.filename = filename
+        self.filename = input_file.filename
 
         # list of microphone channels' names in 'filename'
-        self.mic_channel_names = mic_channel_names
+        self.mic_channel_names = input_file.mic_channel_names
         self.N_ch = len(self.mic_channel_names)
 
         # nominal duration of data recording, in seconds
         #   float
-        self.T = T
+        self.T = input_file.T
 
         # default sampling freq
         #   float
-        self.fs = fs
+        self.fs = input_file.fs
 
         # time vector
         #   (T*fs,) array
@@ -109,23 +109,23 @@ class SingleFileTimeSeries:
 
         # 2nd sampling freq, for data acquired with SIRIUSiwe STG-M rack unit
         # (e.g. load cell, thermocouple)
-        if fs2:
+        if input_file.fs2:
             #   float
-            self.fs2 = fs2
+            self.fs2 = input_file.fs2
 
             #   (T*fs2,) array
             self.t2 = np.linspace(0, self.T - 1/self.fs2, self.T*self.fs2)
 
         # read mic data from filename
-        self._read_mic_chs(filename, mic_channel_names)
+        self._read_mic_chs(self.filename, self.mic_channel_names)
 
         # if present, read other channels' data from 'filename' and calculate
         # their mean values
-        if other_ch_names:
+        if input_file.other_ch_names:
             # list of non-acoustic channels in 'filename'
-            self.other_ch_names = other_ch_names
-            self._read_other_chs(filename, other_ch_names)
-            self.calc_channel_mean(other_ch_names)
+            self.other_ch_names = input_file.other_ch_names
+            self._read_other_chs(self.filename, self.other_ch_names)
+            self.calc_channel_mean(self.other_ch_names)
 
 
     # *************************************************************************
