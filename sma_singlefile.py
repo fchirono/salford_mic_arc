@@ -35,6 +35,8 @@ class InputFile:
         #   str
         assert isinstance(filename, str), "'filename' is not str!"
         self.filename = filename
+        self.is_rotor = False
+
 
     def set_mic_channel_names(self, mic_channel_names):
         # list of microphone channels' names in 'filename'
