@@ -84,6 +84,12 @@ class MultiFileTimeSeries:
                                         self.fs2)
             self.files.append(file)
 
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+        # if given list of non-acoustic channels, read their mean values
+        if other_ch_names:
+            self.calc_channel_mean(other_ch_names)
+
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
     # *************************************************************************
     def filter_data(self, filter_order=3, fc=50, btype='highpass'):
@@ -107,9 +113,9 @@ class MultiFileTimeSeries:
         'SingleFileTimeSeries' instance.)
         """
 
-        # iterates over list of files
-        for fi in range(self.N_files):
-            self.files[fi].calc_channel_mean(ch_names)
+        # # iterates over list of files - already done in SingleFileTimeSeries init
+        # for fi in range(self.N_files):
+        #     self.files[fi].calc_channel_mean(ch_names)
 
         for name in ch_names:
             attr_values = np.zeros(self.N_files)
