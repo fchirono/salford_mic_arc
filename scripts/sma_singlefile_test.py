@@ -23,10 +23,10 @@ p_ref = SMA.P_REF
 
 save_fig = False
 
-# %% read and inspect file
+# %% Create instance of 'InputFile#
 
-# single filename
-ipm_filename = 'data/2022_09_12/IPM5_phi075_6000rpm_180deg_2022_09_12.h5'
+# filename
+filename = 'data/2022_09_12/IPM5_phi075_6000rpm_180deg_2022_09_12.h5'
 
 # create list of microphone channel names
 mic_chs = ['Mic_00deg',
@@ -43,35 +43,45 @@ mic_chs = ['Mic_00deg',
 # create list of other channels to read
 other_chs = ['RPM', 'RevCounter', 'LoadCell1']
 
+# recording length [s]
+T = 30
 
+# sampling freqs [Hz]
+fs = 50000
+fs2 = 12500
 
-# %% read raw data from Dewesoft HDF5 file using 'SingleFileTimeSeries' class
-
-# ipm_data = SMA.SingleFileTimeSeries(ipm_filename, mic_chs, T=30, fs=50000,
-#                                     other_ch_names=other_chs, fs2=12500)
-
-# # calculate mean value of channels listed in 'other_chs'
-# print("Mean thrust : {:.2f} N".format(ipm_data.mean_LoadCell1))
-# print("Mean RPM : {:.1f} ".format(ipm_data.mean_RPM))
-
-
-# %% read raw data from Dewesoft HDF5 file using 'SingleFileRotorTime' class
-
-# 'SingleFileRotorTime' class requires number of blades and blade radius
+# number of rotor blades
 N_blades = 8
+
+# rotor blade radius
 R_blades = 0.145
 
-ipm_data = SMA.SingleFileRotorTime(ipm_filename, N_blades, R_blades, mic_chs,
-                                   T=30, fs=50000,
-                                   other_ch_names=other_chs, fs2=12500)
+# name of attribute containing RPM value
+rpm_name = 'mean_RPM'
 
+# create instance of InputFile
+ipm_inputfile = SMA.InputFile()
+ipm_inputfile.set_filename(filename)
+ipm_inputfile.set_mic_channel_names(mic_chs)
+ipm_inputfile.set_other_ch_names(other_chs)
+ipm_inputfile.set_recording_length(T)
+ipm_inputfile.set_sampling_freq(fs)
+ipm_inputfile.set_sampling_freq2(fs2)
 
-# print mean value of channels listed in 'other_chs'
+# if using SingleFileRotorTime class
+ipm_inputfile.set_N_blades(N_blades)
+ipm_inputfile.set_R_blades(R_blades)
+ipm_inputfile.set_rpm_attr_name(rpm_name)
+
+# %% read raw data from Dewesoft HDF5 file using either 'SingleFileTimeSeries'
+# class or 'SingleFileRotorTime' class
+
+#ipm_data = SMA.SingleFileTimeSeries(ipm_inputfile)
+ipm_data = SMA.SingleFileRotorTime(ipm_inputfile)
+
+# calculate mean value of channels listed in 'other_chs'
 print("Mean thrust : {:.2f} N".format(ipm_data.mean_LoadCell1))
 print("Mean RPM : {:.1f} ".format(ipm_data.mean_RPM))
-
-# set RPM from average value in 'RPM' channel
-ipm_data.set_RPM(ipm_data.mean_RPM)
 
 
 # %% optional tasks: filter data, estimate peak frequency location, export mic
