@@ -77,7 +77,7 @@ ipm_inputfile.set_rpm_attr_name(rpm_name)
 # %% read raw data from Dewesoft HDF5 file using either 'SingleFileTimeSeries'
 # class or 'SingleFileRotorTime' class
 
-#ipm_data = SMA.SingleFileTimeSeries(ipm_inputfile)
+# ipm_data = SMA.SingleFileTimeSeries(ipm_inputfile)
 ipm_data = SMA.SingleFileRotorTime(ipm_inputfile)
 
 # calculate mean value of channels listed in 'other_chs'
