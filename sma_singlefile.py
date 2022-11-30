@@ -60,6 +60,9 @@ class InputFile:
         #   float
         self.fs2 = fs2
 
+    # *************************************************************************
+    # For measurements of rotating devices (rotors, propellers, fans, etc)
+
     def set_N_blades(self, N_blades):
         # For measurements using rotating devices: number of rotor blades
         #   int
@@ -71,6 +74,8 @@ class InputFile:
     def set_rpm_attr_name(self, rpm_attr_name):
         self.rpm_attr_name = rpm_attr_name
 
+    # *************************************************************************
+
 
 class InputFiles(InputFile):
     """
@@ -80,6 +85,17 @@ class InputFiles(InputFile):
         # list of filenames to be read (must be HDF5)
         #   str
         self.filenames = filenames
+
+    def get_InputFile(self, i):
+        """
+        Return 'InputFile' instance of 'i'-th filename
+        """
+        singlefile = InputFile(self.filenames[i])
+
+        # update dict representation of instances
+        singlefile.__dict__.update(self.__dict__)
+
+        return singlefile
 
 
 # #############################################################################
