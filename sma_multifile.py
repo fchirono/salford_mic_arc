@@ -19,7 +19,8 @@ import soundfile as sf
 import scipy.signal as ss
 
 
-from sma_singlefile import InputFile, InputFiles, SingleFileTimeSeries, SingleFilePSD
+from sma_singlefile import InputFile, InputFiles, SingleFileTimeSeries,\
+    SingleFilePSD
 from sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, \
     DEFAULT_WINDOW, _calc_spectral_centroid, _round_to_nearest_odd
 
@@ -80,7 +81,10 @@ class MultiFileTimeSeries:
         self.files = []
 
         for fi in range(self.N_files):
+
+            # get InputFile representation of each file
             single_file = input_files.get_InputFile(fi)
+
             file = SingleFileTimeSeries(single_file)
             self.files.append(file)
 

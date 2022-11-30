@@ -33,45 +33,64 @@ class InputFile:
     def __init__(self, filename):
         # name of file to be read (must be HDF5)
         #   str
+        assert isinstance(filename, str), "'filename' is not str!"
         self.filename = filename
 
     def set_mic_channel_names(self, mic_channel_names):
         # list of microphone channels' names in 'filename'
+        assert isinstance(mic_channel_names, list), "'mic_channel_names' is not list!"
         self.mic_channel_names = mic_channel_names
 
 
     def set_other_ch_names(self, other_ch_names):
         # list of non-acoustic channels in 'filename'
+        assert isinstance(other_ch_names, list), "'other_ch_names' is not list!"
         self.other_ch_names = other_ch_names
 
     def set_recording_length(self, T):
         # nominal duration of data recording, in seconds
         #   float
+        assert isinstance(T, (float, int)), "'T' is not float or int!"
         self.T = T
 
     def set_sampling_freq(self, fs):
         # default sampling freq
         #   float
+        assert isinstance(fs, (float, int)), "'fs' is not float or int!"
         self.fs = fs
 
     def set_sampling_freq2(self, fs2):
         # 2nd sampling freq, for data acquired with SIRIUSiwe STG-M rack unit
         # (e.g. load cell, thermocouple)
         #   float
+        assert isinstance(fs2, (float, int)), "'fs2' is not float or int!"
         self.fs2 = fs2
 
     # *************************************************************************
     # For measurements of rotating devices (rotors, propellers, fans, etc)
 
+    def set_is_rotor(self, is_rotor):
+        # For measurements using rotating devices: bool
+        assert isinstance(is_rotor, bool), "'is_rotor' is not boolean!"
+        self.is_rotor = is_rotor
+
     def set_N_blades(self, N_blades):
         # For measurements using rotating devices: number of rotor blades
         #   int
+        assert isinstance(N_blades, int), "'N_blades' is not int!"
         self.N_blades = N_blades
 
     def set_R_blades(self, R_blades):
+        # For measurements using rotating devices: rotor blades' radius [m]
+        #   float
+        assert isinstance(R_blades, (float, int)), "'R_blades' is not float or int!"
         self.R_blades = R_blades
 
     def set_rpm_attr_name(self, rpm_attr_name):
+        # For measurements using rotating devices: name of attribute containing
+        # measured/estimated RPM in recording
+        #   str
+        assert isinstance(rpm_attr_name, str), "'rpm_attr_name' is not string!"
         self.rpm_attr_name = rpm_attr_name
 
     # *************************************************************************
@@ -84,16 +103,18 @@ class InputFiles(InputFile):
     """
     def __init__(self, filenames):
         # list of filenames to be read (must be HDF5)
-        #   str
+        assert isinstance(filenames, list), "'filenames' is not list!"
         self.filenames = filenames
+
 
     def get_InputFile(self, i):
         """
         Return 'InputFile' instance of 'i'-th filename
         """
+
         singlefile = InputFile(self.filenames[i])
 
-        # update dict representation of instances
+        # update dict representation of 'InputFile' instance
         singlefile.__dict__.update(self.__dict__)
 
         return singlefile
