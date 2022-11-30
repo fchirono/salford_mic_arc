@@ -23,12 +23,65 @@ from sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, \
 
 
 # #############################################################################
+# %% Class 'InputFile'
+# #############################################################################
+
+class InputFile:
+    """
+    Class to hold Dewesoft HDF5 input file info
+    """
+    def __init__(self):
+        pass
+
+    def set_filename(self, filename):
+        # name of file to be read (must be HDF5)
+        #   str
+        self.filename = filename
+
+    def set_mic_channel_names(self, mic_channel_names):
+        # list of microphone channels' names in 'filename'
+        self.mic_channel_names = mic_channel_names
+
+    def set_recording_length(self, T):
+        # nominal duration of data recording, in seconds
+        #   float
+        self.T = T
+
+    def set_sampling_freq(self, fs):
+        # default sampling freq
+        #   float
+        self.fs = fs
+
+    def set_other_ch_names(self, other_ch_names):
+        # list of non-acoustic channels in 'filename'
+        self.other_ch_names = other_ch_names
+
+    def set_sampling_freq2(self, fs2):
+        # 2nd sampling freq, for data acquired with SIRIUSiwe STG-M rack unit
+        # (e.g. load cell, thermocouple)
+        #   float
+        self.fs2 = fs2
+
+
+    def set_N_blades(self, N_blades):
+        # For measurements using rotating devices: number of rotor blades
+        #   int
+        self.N_blades = N_blades
+
+    def set_R_blades(self, R_blades):
+        self.R_blades = R_blades
+
+    def set_rpm_attr_name(self, rpm_attr_name):
+        self.rpm_attr_name = rpm_attr_name
+
+
+# #############################################################################
 # %% Class 'SingleFileTimeSeries'
 # #############################################################################
 
 class SingleFileTimeSeries:
     """
-    Class to read raw measurement data from Dewesoft HDF5 files
+    Class to read raw measurement data from input file
     """
 
     # *************************************************************************
@@ -351,12 +404,13 @@ class SingleFileRotorTime(SingleFileTimeSeries):
     """
     Specialized class for analysing measurements of aircraft propulsion devices
     such as rotors, propellers, fans, etc. Requires extra input arguments
-    'N_blades' and 'R_blades'.
+    'N_blades' and 'R_blades', and optional argument 'rpm_attr_name'.
     """
 
     def __init__(self, filename, N_blades, R_blades,
                  mic_channel_names, T=30, fs=50000,
-                 other_ch_names=None, fs2=None):
+                 other_ch_names=None, fs2=None,
+                 rpm_attr_name=None):
 
         # Initialize superclass
         super().__init__(filename, mic_channel_names, T, fs, other_ch_names, fs2)
@@ -368,6 +422,11 @@ class SingleFileRotorTime(SingleFileTimeSeries):
         # Radius of rotor blades [m]
         #   float
         self.R_blades = R_blades
+
+        # Name of attribute containing RPM value
+        #   if None, RPM must be set manually using 'set_RPM'
+        if rpm_attr_name:
+            self.set_RPM(getattr(self, rpm_attr_name))
 
 
     # *************************************************************************
