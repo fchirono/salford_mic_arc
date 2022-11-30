@@ -354,16 +354,19 @@ class SingleFileRotorTime(SingleFileTimeSeries):
     'N_blades' and 'R_blades'.
     """
 
-    def __init__(self, filename, N_blades, R_blades, mic_channel_names, T=30,
-                 fs=50000, other_ch_names=None, fs2=None):
+    def __init__(self, filename, N_blades, R_blades,
+                 mic_channel_names, T=30, fs=50000,
+                 other_ch_names=None, fs2=None):
 
         # Initialize superclass
         super().__init__(filename, mic_channel_names, T, fs, other_ch_names, fs2)
 
         # Number of rotor blades
+        #   int
         self.N_blades = N_blades
 
         # Radius of rotor blades [m]
+        #   float
         self.R_blades = R_blades
 
 
@@ -376,6 +379,7 @@ class SingleFileRotorTime(SingleFileTimeSeries):
         """
 
         # Rotations per minute
+        #   float
         self.rpm = rpm
 
         # shaft frequency [Hz]
@@ -393,6 +397,7 @@ class SingleFileRotorTime(SingleFileTimeSeries):
         Setter method for rotor shaft freq. Also writes RPM, BPF, and Mtip.
         """
         # shaft frequency [Hz]
+        #   float
         self.f_shaft = f_shaft
 
         # Rotations per minute
@@ -511,6 +516,7 @@ class SingleFileRotorTime(SingleFileTimeSeries):
         Calculates and outputs the PSDs of all channels. Optionally, skip
         initial segment 't0'.
         """
+
         # use 'calc_PSDs' from parent class 'SingleFileTimeSeries'
         myPSDs = super().calc_PSDs(Ndft, Noverlap, window, t0)
 
