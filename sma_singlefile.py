@@ -28,7 +28,7 @@ from sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, \
 
 class InputFile:
     """
-    Class to hold Dewesoft HDF5 input file info
+    Class to hold Dewesoft HDF5 file metadata
     """
     def __init__(self, filename):
         # name of file to be read (must be HDF5)
@@ -77,9 +77,10 @@ class InputFile:
     # *************************************************************************
 
 
+# #############################################################################
 class InputFiles(InputFile):
     """
-    Child class for multiple files
+    Child class for holding metadata on multiple files
     """
     def __init__(self, filenames):
         # list of filenames to be read (must be HDF5)
