@@ -147,8 +147,6 @@ class MultiFilePSD:
         self.is_rotor = input_files.is_rotor
         self.N_files = len(self.filenames)
 
-        self.mic_channel_names = input_files.mic_channel_names
-
         self.Ndft = Ndft
         self.window = window
         self.Noverlap = Noverlap
