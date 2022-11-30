@@ -407,26 +407,23 @@ class SingleFileRotorTime(SingleFileTimeSeries):
     'N_blades' and 'R_blades', and optional argument 'rpm_attr_name'.
     """
 
-    def __init__(self, filename, N_blades, R_blades,
-                 mic_channel_names, T=30, fs=50000,
-                 other_ch_names=None, fs2=None,
-                 rpm_attr_name=None):
+    def __init__(self, input_file):
 
         # Initialize superclass
-        super().__init__(filename, mic_channel_names, T, fs, other_ch_names, fs2)
+        super().__init__(input_file)
 
         # Number of rotor blades
         #   int
-        self.N_blades = N_blades
+        self.N_blades = input_file.N_blades
 
         # Radius of rotor blades [m]
         #   float
-        self.R_blades = R_blades
+        self.R_blades = input_file.R_blades
 
         # Name of attribute containing RPM value
         #   if None, RPM must be set manually using 'set_RPM'
-        if rpm_attr_name:
-            self.set_RPM(getattr(self, rpm_attr_name))
+        if input_file.rpm_attr_name:
+            self.set_RPM(getattr(self, input_file.rpm_attr_name))
 
 
     # *************************************************************************
