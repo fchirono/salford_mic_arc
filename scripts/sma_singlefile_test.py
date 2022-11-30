@@ -105,7 +105,7 @@ f_bpf = ipm_data.estimate_peak_freq(f_low=750, f_high=850, Ndft=2**14)
 f_low = 150
 f_high = 10000
 
-ipm_PSD = ipm_data.calc_PSDs()
+ipm_PSD = ipm_data.calc_PSDs(Ndft=2**13, Noverlap=2**12, window='hann')
 
 
 # calculate broadband component of PSD
