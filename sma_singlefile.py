@@ -23,17 +23,14 @@ from sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, \
 
 
 # #############################################################################
-# %% Class 'InputFile'
+# %% Class 'InputFile' and 'InputFiles'
 # #############################################################################
 
 class InputFile:
     """
     Class to hold Dewesoft HDF5 input file info
     """
-    def __init__(self):
-        pass
-
-    def set_filename(self, filename):
+    def __init__(self, filename):
         # name of file to be read (must be HDF5)
         #   str
         self.filename = filename
@@ -41,6 +38,11 @@ class InputFile:
     def set_mic_channel_names(self, mic_channel_names):
         # list of microphone channels' names in 'filename'
         self.mic_channel_names = mic_channel_names
+
+
+    def set_other_ch_names(self, other_ch_names):
+        # list of non-acoustic channels in 'filename'
+        self.other_ch_names = other_ch_names
 
     def set_recording_length(self, T):
         # nominal duration of data recording, in seconds
@@ -51,10 +53,6 @@ class InputFile:
         # default sampling freq
         #   float
         self.fs = fs
-
-    def set_other_ch_names(self, other_ch_names):
-        # list of non-acoustic channels in 'filename'
-        self.other_ch_names = other_ch_names
 
     def set_sampling_freq2(self, fs2):
         # 2nd sampling freq, for data acquired with SIRIUSiwe STG-M rack unit
@@ -72,6 +70,16 @@ class InputFile:
 
     def set_rpm_attr_name(self, rpm_attr_name):
         self.rpm_attr_name = rpm_attr_name
+
+
+class InputFiles(InputFile):
+    """
+    Child class for multiple files
+    """
+    def __init__(self, filenames):
+        # list of filenames to be read (must be HDF5)
+        #   str
+        self.filenames = filenames
 
 
 # #############################################################################

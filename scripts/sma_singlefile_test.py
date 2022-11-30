@@ -23,7 +23,7 @@ p_ref = SMA.P_REF
 
 save_fig = False
 
-# %% Create instance of 'InputFile#
+# %% Create instance of 'InputFile'
 
 # filename
 filename = 'data/2022_09_12/IPM5_phi075_6000rpm_180deg_2022_09_12.h5'
@@ -60,15 +60,16 @@ R_blades = 0.145
 rpm_name = 'mean_RPM'
 
 # create instance of InputFile
-ipm_inputfile = SMA.InputFile()
-ipm_inputfile.set_filename(filename)
+ipm_inputfile = SMA.InputFile(filename)
+
+# set file metadata
 ipm_inputfile.set_mic_channel_names(mic_chs)
 ipm_inputfile.set_other_ch_names(other_chs)
 ipm_inputfile.set_recording_length(T)
 ipm_inputfile.set_sampling_freq(fs)
 ipm_inputfile.set_sampling_freq2(fs2)
 
-# if using SingleFileRotorTime class
+# if using SingleFileRotorTime class, set rotor metadata
 ipm_inputfile.set_N_blades(N_blades)
 ipm_inputfile.set_R_blades(R_blades)
 ipm_inputfile.set_rpm_attr_name(rpm_name)
