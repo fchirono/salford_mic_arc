@@ -66,11 +66,13 @@ class SingleFileTimeSeries:
         # read mic data from filename
         self._read_mic_chs(filename, mic_channel_names)
 
-        # if present, read other channels' data from 'filename'
+        # if present, read other channels' data from 'filename' and calculate
+        # their mean values
         if other_ch_names:
             # list of non-acoustic channels in 'filename'
             self.other_ch_names = other_ch_names
             self._read_other_chs(filename, other_ch_names)
+            self.calc_channel_mean(other_ch_names)
 
 
     # *************************************************************************
