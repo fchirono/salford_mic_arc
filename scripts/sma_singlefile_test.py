@@ -51,7 +51,6 @@ other_chs = ['RPM', 'RevCounter', 'LoadCell1']
 #                                     other_ch_names=other_chs, fs2=12500)
 
 # # calculate mean value of channels listed in 'other_chs'
-# ipm_data.calc_channel_mean(other_chs)
 # print("Mean thrust : {:.2f} N".format(ipm_data.mean_LoadCell1))
 # print("Mean RPM : {:.1f} ".format(ipm_data.mean_RPM))
 
@@ -67,8 +66,7 @@ ipm_data = SMA.SingleFileRotor(ipm_filename, N_blades, R_blades, mic_chs,
                                other_ch_names=other_chs, fs2=12500)
 
 
-# calculate mean value of channels listed in 'other_chs'
-ipm_data.calc_channel_mean(other_chs)
+# print mean value of channels listed in 'other_chs'
 print("Mean thrust : {:.2f} N".format(ipm_data.mean_LoadCell1))
 print("Mean RPM : {:.1f} ".format(ipm_data.mean_RPM))
 

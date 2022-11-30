@@ -54,7 +54,6 @@ ipm_data = SMA.MultiFileTimeSeries(ipm_filenames, mic_chs, T=30, fs=50000,
 
 
 # calculate mean value of channels listed in 'other_chs'
-ipm_data.calc_channel_mean(other_chs)
 print('Mean RPM: {}'.format(ipm_data.mean_RPM))
 print('Mean thrust [N]: {}'.format(ipm_data.mean_LoadCell1))
 
