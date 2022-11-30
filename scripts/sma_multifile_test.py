@@ -31,7 +31,6 @@ save_fig = False
 ipm_filenames = ['data/2022_09_12/IPM5_phi075_6000rpm_000deg_2022_09_12.h5',
                  'data/2022_09_12/IPM5_phi075_6000rpm_180deg_2022_09_12.h5',]
 
-
 # create list of microphone channel names
 mic_chs = ['Mic_00deg',
            'Mic_10deg',
@@ -47,16 +46,44 @@ mic_chs = ['Mic_00deg',
 # create list of other channels to read
 other_chs = ['RPM', 'RevCounter', 'LoadCell1']
 
+# recording length [s]
+T = 30
 
-# read raw time series from Dewesoft HDF5 file
-ipm_data = SMA.MultiFileTimeSeries(ipm_filenames, mic_chs, T=30, fs=50000,
-                                    other_ch_names=other_chs, fs2=12500)
+# sampling freqs [Hz]
+fs = 50000
+fs2 = 12500
 
+# number of rotor blades
+N_blades = 8
+
+# rotor blade radius
+R_blades = 0.145
+
+# name of attribute containing RPM value
+rpm_name = 'mean_RPM'
+
+# create instance of InputFile
+ipm_inputfiles = SMA.InputFiles(ipm_filenames)
+
+# set file metadata
+ipm_inputfiles.set_mic_channel_names(mic_chs)
+ipm_inputfiles.set_other_ch_names(other_chs)
+ipm_inputfiles.set_recording_length(T)
+ipm_inputfiles.set_sampling_freq(fs)
+ipm_inputfiles.set_sampling_freq2(fs2)
+
+# if using SingleFileRotorTime class, set rotor metadata
+ipm_inputfiles.set_N_blades(N_blades)
+ipm_inputfiles.set_R_blades(R_blades)
+ipm_inputfiles.set_rpm_attr_name(rpm_name)
+
+
+# %% read raw time series from Dewesoft HDF5 file
+ipm_data = SMA.MultiFileTimeSeries(ipm_inputfiles)
 
 # calculate mean value of channels listed in 'other_chs'
 print('Mean RPM: {}'.format(ipm_data.mean_RPM))
 print('Mean thrust [N]: {}'.format(ipm_data.mean_LoadCell1))
-
 
 # # filter mic data using 3rd order highpass Butterworth filter at 50 Hz cutoff
 # ipm_data.filter_data(filter_order=3, fc=50, btype='highpass')
@@ -68,7 +95,7 @@ print('Mean thrust [N]: {}'.format(ipm_data.mean_LoadCell1))
 f_low = 150
 f_high = 10000
 
-ipm_PSD = SMA.MultiFilePSD(ipm_filenames, mic_chs)
+ipm_PSD = SMA.MultiFilePSD(ipm_inputfiles)
 
 # *****************************************************************************
 # calculate SPLs by integrating the respective PSDs

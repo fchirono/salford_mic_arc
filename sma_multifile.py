@@ -19,7 +19,7 @@ import soundfile as sf
 import scipy.signal as ss
 
 
-from sma_singlefile import InputFiles, SingleFileTimeSeries, SingleFilePSD
+from sma_singlefile import InputFile, InputFiles, SingleFileTimeSeries, SingleFilePSD
 from sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, \
     DEFAULT_WINDOW, _calc_spectral_centroid, _round_to_nearest_odd
 
@@ -35,40 +35,41 @@ class MultiFileTimeSeries:
     """
 
     # *************************************************************************
-    def __init__(self, filenames, mic_channel_names, T=30, fs=50000,
-                 other_ch_names=None, fs2=None):
+    def __init__(self, input_files):
+
+
+        assert isinstance(input_files, InputFiles), "Input argument is not instance of 'InputFiles'!"
 
         # list of names of files to be read (must be HDF5)
-        self.filenames = filenames
+        self.filenames = input_files.filenames
         self.N_files = len(self.filenames)
 
         # list of microphone channels' names in all files
-        self.mic_channel_names = mic_channel_names
+        self.mic_channel_names = input_files.mic_channel_names
         self.N_ch = len(self.mic_channel_names)
 
         # nominal duration of data recording, in seconds
         #   float
-        self.T = T
+        self.T = input_files.T
 
         # default sampling freq
         #   float
-        self.fs = fs
+        self.fs = input_files.fs
 
         # time vector
         #   (T*fs,) array
         self.t = np.linspace(0, self.T - 1/self.fs, self.T*self.fs)
 
-
         # list of non-acoustic channels in 'filename'
         #   list or None
-        self.other_ch_names = other_ch_names
+        self.other_ch_names = input_files.other_ch_names
 
         # 2nd sampling freq, for data acquired with SIRIUSiwe STG-M rack unit
         # (e.g. load cell, thermocouple)
         #   float or None
-        self.fs2 = fs2
+        self.fs2 = input_files.fs2
 
-        if fs2:
+        if input_files.fs2:
             #   (T*fs2,) array
             self.t2 = np.linspace(0, self.T - 1/self.fs2, self.T*self.fs2)
 
@@ -79,15 +80,14 @@ class MultiFileTimeSeries:
         self.files = []
 
         for fi in range(self.N_files):
-            file = SingleFileTimeSeries(filenames[fi], self.mic_channel_names,
-                                        self.T, self.fs, self.other_ch_names,
-                                        self.fs2)
+            single_file = input_files.get_InputFile(fi)
+            file = SingleFileTimeSeries(single_file)
             self.files.append(file)
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
         # if given list of non-acoustic channels, read their mean values
-        if other_ch_names:
-            self.calc_channel_mean(other_ch_names)
+        if input_files.other_ch_names:
+            self.calc_channel_mean(input_files.other_ch_names)
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
@@ -135,24 +135,27 @@ class MultiFilePSD:
     from multiple files, collected over a list of filenames.
     """
 
-    def __init__(self, filenames, mic_channel_names, Ndft=DEFAULT_NDFT,
+    def __init__(self, input_files, Ndft=DEFAULT_NDFT,
                  Noverlap=DEFAULT_NOVERLAP, window=DEFAULT_WINDOW):
 
-        self.filenames = filenames
+        assert isinstance(input_files, InputFiles),\
+            "Input argument is not instance of 'InputFiles'!"
+
+        self.filenames = input_files.filenames
         self.N_files = len(self.filenames)
 
-        self.mic_channel_names = mic_channel_names
+        self.mic_channel_names = input_files.mic_channel_names
 
         self.Ndft = Ndft
         self.window = window
         self.Noverlap = Noverlap
 
-        self.calc_PSDs(Ndft, window, Noverlap)
+        self.calc_PSDs(input_files, Ndft, window, Noverlap)
 
 
     # *************************************************************************
-    def calc_PSDs(self, Ndft=DEFAULT_NDFT, Noverlap=DEFAULT_NOVERLAP,
-                  window=DEFAULT_WINDOW):
+    def calc_PSDs(self, input_files, Ndft=DEFAULT_NDFT,
+                  Noverlap=DEFAULT_NOVERLAP, window=DEFAULT_WINDOW):
         """
         Calculates PSDs for all files in list of file names.
         """
@@ -162,9 +165,8 @@ class MultiFilePSD:
 
         # calculate PSDs from remaining files
         for fi in range(self.N_files):
-
-            ds_data = SingleFileTimeSeries(self.filenames[fi],
-                                           self.mic_channel_names)
+            single_file = input_files.get_InputFile(fi)
+            ds_data = SingleFileTimeSeries(single_file)
 
             self.files.append(ds_data.calc_PSDs(Ndft, window, Noverlap))
 
