@@ -35,6 +35,7 @@ import scipy.signal as ss
 
 from sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, DEFAULT_WINDOW
 
-from sma_singlefile import SingleFileTimeSeries, SingleFileRotor, SingleFilePSD
+from sma_singlefile import SingleFileTimeSeries, SingleFileRotorTime, \
+    SingleFilePSD
 from sma_multifile import MultiFileTimeSeries, MultiFilePSD
 
