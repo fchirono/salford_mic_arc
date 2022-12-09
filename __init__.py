@@ -33,9 +33,10 @@ import soundfile as sf
 import scipy.signal as ss
 
 
-from .sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, DEFAULT_WINDOW
+from .sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, DEFAULT_WINDOW, \
+    print_hdf5_file_structure, print_hdf5_item_structure
 
-from .sma_singlefile import InputFile, InputFiles, SingleFileTimeSeries, \
+from .sma_singlefile import InputFile, InputFiles, SingleFileTimeSeries,\
     SingleFilePSD
 from .sma_multifile import MultiFileTimeSeries, MultiFilePSD
 

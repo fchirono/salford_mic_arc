@@ -28,6 +28,9 @@ save_fig = False
 # filename
 filename = 'data/2022_09_12/IPM5_phi075_6000rpm_180deg_2022_09_12.h5'
 
+# # optional: print HDF5 file structure
+# SMA.print_hdf5_file_structure(filename)
+
 # create list of microphone channel names
 mic_chs = ['Mic_00deg',
            'Mic_10deg',
