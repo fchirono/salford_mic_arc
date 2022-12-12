@@ -107,6 +107,7 @@ class InputFiles(InputFile):
         # list of filenames to be read (must be HDF5)
         assert isinstance(filenames, list), "'filenames' is not list!"
         self.filenames = filenames
+        self.is_rotor = False
 
 
     def get_InputFile(self, i):
