@@ -33,10 +33,12 @@ import soundfile as sf
 import scipy.signal as ss
 
 
-from .sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, DEFAULT_WINDOW, \
-    print_hdf5_file_structure, print_hdf5_item_structure, _calc_centroid
+from salford_mic_arc.sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP,\
+    DEFAULT_WINDOW, print_hdf5_file_structure, print_hdf5_item_structure,\
+        _calc_centroid
 
-from .sma_singlefile import InputFile, InputFiles, SingleFileTimeSeries,\
-    SingleFilePSD
-from .sma_multifile import MultiFileTimeSeries, MultiFilePSD
+from salford_mic_arc.sma_singlefile import InputFile, InputFiles,\
+    SingleFileTimeSeries, SingleFilePSD
+
+from salford_mic_arc.sma_multifile import MultiFileTimeSeries, MultiFilePSD
 

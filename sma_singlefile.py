@@ -18,7 +18,7 @@ import soundfile as sf
 import scipy.signal as ss
 
 
-from sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, \
+from salford_mic_arc.sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, \
     DEFAULT_WINDOW, _calc_centroid, _round_to_nearest_odd
 
 
