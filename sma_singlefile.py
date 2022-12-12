@@ -157,7 +157,7 @@ class SingleFileTimeSeries:
 
         # 2nd sampling freq, for data acquired with SIRIUSiwe STG-M rack unit
         # (e.g. load cell, thermocouple)
-        if input_file.fs2:
+        if hasattr(input_file, 'fs2'):
             #   float
             self.fs2 = input_file.fs2
 
@@ -169,7 +169,7 @@ class SingleFileTimeSeries:
 
         # if present, read other channels' data from 'filename' and calculate
         # their mean values
-        if input_file.other_ch_names:
+        if hasattr(input_file, 'other_ch_names'):
             # list of non-acoustic channels in 'filename'
             self.other_ch_names = input_file.other_ch_names
             self._read_other_chs(self.filename, self.other_ch_names)
@@ -191,7 +191,7 @@ class SingleFileTimeSeries:
 
             # Name of attribute containing RPM value
             #   if None, RPM must be set manually using 'set_RPM'
-            if input_file.rpm_attr_name:
+            if hasattr(input_file, 'rpm_attr_name'):
                 self.set_RPM(getattr(self, input_file.rpm_attr_name))
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
@@ -399,10 +399,15 @@ class SingleFileTimeSeries:
         if self.is_rotor:
             myPSDs.N_blades = self.N_blades
             myPSDs.R_blades = self.R_blades
-            myPSDs.rpm = self.rpm
-            myPSDs.f_shaft = self.f_shaft
-            myPSDs.bpf = self.bpf
-            myPSDs.Mtip = self.Mtip
+
+            if hasattr(self, 'rpm'):
+                myPSDs.rpm = self.rpm
+            if hasattr(self, 'f_shaft'):
+                myPSDs.f_shaft = self.f_shaft
+            if hasattr(self, 'bpf'):
+                myPSDs.bpf = self.bpf
+            if hasattr(self, 'Mtip'):
+                myPSDs.Mtip = self.Mtip
 
         return myPSDs
 
