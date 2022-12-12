@@ -368,8 +368,8 @@ class SingleFileTimeSeries:
                 fpeak_mask = np.arange(n_peak - search_radius,
                                        n_peak + search_radius + 1)
 
-                f_peak[ch] = _calc_spectral_centroid(PSDs.freq[fpeak_mask],
-                                                     PSDs.psd[ch, fpeak_mask])
+                f_peak[ch] = _calc_centroid(PSDs.freq[fpeak_mask],
+                                            PSDs.psd[ch, fpeak_mask])
             # -----------------------------------------------------------------
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*

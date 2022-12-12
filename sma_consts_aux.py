@@ -37,10 +37,10 @@ DEFAULT_WINDOW = 'hann'
 # ##########################################################################
 
 
-def _calc_spectral_centroid(x, y):
+def _calc_centroid(x, y):
     """
-    Calculates the spectral centroid for two arrays 'x' and 'y', where 'y'
-    is assumed to be a function of 'x'.
+    Calculates the centroid for two arrays 'x' and 'y', where 'y' is assumed
+    to be a function of 'x'.
 
     This function is meant to be used for roughly estimating tone centre
     frequency when these fall in between frequency samples.

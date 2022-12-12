@@ -22,7 +22,7 @@ import scipy.signal as ss
 from sma_singlefile import InputFile, InputFiles, SingleFileTimeSeries,\
     SingleFilePSD
 from sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, \
-    DEFAULT_WINDOW, _calc_spectral_centroid, _round_to_nearest_odd
+    DEFAULT_WINDOW, _calc_centroid, _round_to_nearest_odd
 
 
 
