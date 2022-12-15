@@ -139,6 +139,7 @@ class SingleFileTimeSeries:
 
         # name of file to be read (must be HDF5)
         self.filename = input_file.filename
+        self.is_rotor = input_file.is_rotor
 
         # list of microphone channels' names in 'filename'
         self.mic_channel_names = input_file.mic_channel_names
@@ -177,7 +178,7 @@ class SingleFileTimeSeries:
             self.calc_channel_mean(self.other_ch_names)
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-        # check if input data belongs to rotor (propellers, fans) measurement
+        # check if input data is a rotor-type (e.g. propeller, fan) measurement
         if input_file.is_rotor:
 
             self.is_rotor = True
