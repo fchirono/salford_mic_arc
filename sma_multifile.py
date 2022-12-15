@@ -38,7 +38,6 @@ class MultiFileTimeSeries:
     # *************************************************************************
     def __init__(self, input_files):
 
-
         assert isinstance(input_files, InputFiles), "Input argument is not instance of 'InputFiles'!"
 
         # list of names of files to be read (must be HDF5)
@@ -62,10 +61,6 @@ class MultiFileTimeSeries:
         # time vector
         #   (T*fs,) array
         self.t = np.linspace(0, self.T - 1/self.fs, self.T*self.fs)
-
-        # list of non-acoustic channels in 'filename'
-        #   list or None
-        self.other_ch_names = input_files.other_ch_names
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
         # 2nd sampling freq, for data acquired with SIRIUSiwe STG-M rack unit
@@ -94,7 +89,9 @@ class MultiFileTimeSeries:
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
         # if given list of non-acoustic channels, read their mean values
-        if input_files.other_ch_names:
+
+        if hasattr(input_files, 'other_ch_names'):
+            self.other_ch_names = input_files.other_ch_names
             self.calc_channel_mean(input_files.other_ch_names)
 
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
