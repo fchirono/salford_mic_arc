@@ -67,12 +67,14 @@ class MultiFileTimeSeries:
         #   list or None
         self.other_ch_names = input_files.other_ch_names
 
+        # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
         # 2nd sampling freq, for data acquired with SIRIUSiwe STG-M rack unit
         # (e.g. load cell, thermocouple)
-        #   float or None
-        self.fs2 = input_files.fs2
+        if hasattr(input_files, 'fs2'):
 
-        if input_files.fs2:
+            #   float
+            self.fs2 = input_files.fs2
+
             #   (T*fs2,) array
             self.t2 = np.linspace(0, self.T - 1/self.fs2, self.T*self.fs2)
 
