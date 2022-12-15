@@ -260,8 +260,9 @@ class SingleFileTimeSeries:
             # assert all channel names actually exist in h5file
             channel_names = list(h5file.keys())
 
-            assert set(other_ch_names).issubset(channel_names), \
-                "Channel named {} does not exist in this hdf5 file!"
+            for ch_name in other_ch_names:
+                assert (ch_name in channel_names), \
+                    "Channel named '{}' does not exist in '{}' file!".format(ch_name, filename)
 
             # read data from HDF5 file, save as attribute
             for ch_name in other_ch_names:
