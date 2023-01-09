@@ -72,11 +72,14 @@ ipm_inputfile.set_recording_length(T)
 ipm_inputfile.set_sampling_freq(fs)
 ipm_inputfile.set_sampling_freq2(fs2)
 
-# if using SingleFileRotorTime class, set rotor metadata
+# set rotor metadata
 ipm_inputfile.is_rotor = True
 ipm_inputfile.set_N_blades(N_blades)
 ipm_inputfile.set_R_blades(R_blades)
 ipm_inputfile.set_rpm_attr_name(rpm_name)
+
+# print instance attributes by viewing it as a dict
+print(ipm_inputfile.__dict__.keys())
 
 # %% read raw data from Dewesoft HDF5 file using 'SingleFileTimeSeries' class
 
