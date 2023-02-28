@@ -42,3 +42,4 @@ from salford_mic_arc.sma_singlefile import InputFile, InputFiles,\
 
 from salford_mic_arc.sma_multifile import MultiFileTimeSeries, MultiFilePSD
 
+import salford_mic_arc.sma_angular_resampling as angular_resampling
