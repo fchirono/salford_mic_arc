@@ -131,7 +131,7 @@ def extract_rotor_freq(rotor_angle, fs):
     return inst_freq
 
 
-def angular_resampling(signals, rotor_angle, N_interp):
+def angular_resampling(signals, rotor_angle, N_interp, ignore_last_cycle=True):
     """
     Resamples time-domain signals to rotor angle domain, so output signal
     samples are locked with rotor angular position and have 'N_interp' samples
@@ -151,6 +151,10 @@ def angular_resampling(signals, rotor_angle, N_interp):
 
     N_interp : int
         Number of samples to use in interpolation (per cycle)
+    
+    ignore_last_cycle : boolean, optional
+        Flag to determine whether to ignore last full cycle, as it might be 
+        corrupted. Default is True
 
     Returns
     -------
@@ -177,15 +181,20 @@ def angular_resampling(signals, rotor_angle, N_interp):
     # Number of integer cycles present in angular signals
     N_cycles = N_zeros-1
 
+
     # **********************************************************************
     # interpolate each cycle (plus safety buffer of 10 samples on each side)
-    # onto rotor angle 'theta'. Ignore last full cycle, which can be corrupted
-
-    angular_signals = np.zeros((N_ch, (N_cycles-1)*N_interp))
-    angle_signal = np.zeros((N_cycles-1)*N_interp)
+    # onto rotor angle 'theta'.
+    
+    if ignore_last_cycle:
+        # Last full cycle may be corrupted
+        N_cycles -= 1
+        
+    angular_signals = np.zeros((N_ch, N_cycles*N_interp))
+    angle_signal = np.zeros(N_cycles*N_interp)
 
     # for each full cycle in recording (except the last)...
-    for n_c in range(N_cycles-1):
+    for n_c in range(N_cycles):
 
         # find indices a bit before crossing and a bit after next crossing
         n_start = rotor_zeros[n_c] - 10
