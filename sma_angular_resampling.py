@@ -79,6 +79,37 @@ def extract_rotor_angle(tacho_data, fs, f_low, f_high, filter_order):
     return rotor_angle
 
 
+def shift_rotor_angle(rotor_angle, phase_shift, angle_units='deg'):
+    """
+    Applies a phase shift to a rotor angle variable. Input 'rotor_angle' should
+    be between 0 and 2*pi.
+
+    Parameters
+    ----------
+    rotor_angle : (Nt,)-shape array_like
+        Numpy array containing instantaneous rotor angle
+    
+    phase_shift : float
+        Amount of phase shift, in degrees (default) or radians.
+
+    angle_units : {'deg', 'rad'}, optional.
+        Flag determining whether phase shift is in degrees or radians. Default
+        is degrees.
+    
+    Returns
+    -------
+    rotor_angle_shifted : (Nt,)-shape array_like
+        Instantaneous rotor angle shifted by 'phase_shift'.
+    """
+    
+    if angle_units == 'deg':
+        phase_shift *= np.pi/180
+    
+    _, rotor_angle_shifted = np.divmod(rotor_angle + phase_shift, 2*np.pi)
+    
+    return rotor_angle_shifted
+    
+
 def extract_rotor_zeros(rotor_angle):
     """
     Returns a list of indices of where the rotor angular angle time series
