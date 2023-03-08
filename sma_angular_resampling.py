@@ -181,7 +181,6 @@ def angular_resampling(signals, rotor_angle, N_interp, ignore_last_cycle=True):
     # Number of integer cycles present in angular signals
     N_cycles = N_zeros-1
 
-
     # **********************************************************************
     # interpolate each cycle (plus safety buffer of 10 samples on each side)
     # onto rotor angle 'theta'.
@@ -216,3 +215,42 @@ def angular_resampling(signals, rotor_angle, N_interp, ignore_last_cycle=True):
     return angular_signals, angle_signal
 
 
+def synch_averaging(signals, N_per_cycle, N_periods):
+    """
+    Performs synchronous averaging of an input 'signals' containing 
+    multichannel, resampled signals with exactly 'N_per_cycle' samples per
+    period. Outputs are the mean, synchronously-averaged signal calculated over
+    one full period, and the residue signal (after subtracting the mean).
+    
+    Parameters
+    ----------
+    signals : (N_ch, N_t)-shape array_like
+        Numpy array containing 'N_ch' signals with exactly 'N_cycles' full
+        cycles (so N_t = N_cycles*N_per_cycle)
+
+    N_per_cycle : int
+        Number of samples per cycle
+    
+    N_periods : int
+        Number of integer periods to include in output signal.
+
+    Returns
+    -------
+    mean_signal : (N_ch, N_periods*N_per_cycle)-shape array_like
+        Numpy array containing 'N_ch' mean signals per 'N_periods'
+
+    residue_signal : (N_ch, Nt)-shape array_like
+        Numpy array containing 'N_ch' residue signals
+    """
+    
+    N_ch, N_t = signals.shape
+    
+    signals_period = signals.reshape((N_ch, N_periods*N_per_cycle, -1),
+                                     order='F')
+    
+    mean = signals_period.mean(axis=2)
+    
+    residue = (signals_period - mean[:, :, np.newaxis]).reshape((N_ch, -1))
+    
+    return mean, residue
+    
