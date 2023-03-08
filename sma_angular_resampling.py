@@ -281,7 +281,7 @@ def synch_averaging(signals, N_per_cycle, N_periods):
     
     mean = signals_period.mean(axis=2)
     
-    residue = (signals_period - mean[:, :, np.newaxis]).reshape((N_ch, -1))
+    residue = (signals_period - mean[:, :, np.newaxis]).reshape((N_ch, -1), order='F')
     
     return mean, residue
     
