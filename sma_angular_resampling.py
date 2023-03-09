@@ -276,6 +276,12 @@ def synch_averaging(signals, N_per_cycle, N_periods):
     
     N_ch, N_t = signals.shape
     
+    # zero-pad signals if necessary
+    N_zero_pad = N_t%(N_periods*N_per_cycle)
+    if N_zero_pad != 0:
+        zero_padding = np.zeros((N_ch, N_zero_pad))
+        signals = np.concatenate((signals, zero_padding), axis=1)
+    
     signals_period = signals.reshape((N_ch, N_periods*N_per_cycle, -1),
                                      order='F')
     
