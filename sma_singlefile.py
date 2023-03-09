@@ -618,17 +618,9 @@ class SingleFileTimeSeries:
                  subtype)
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
-
-        
-
+    
     # *************************************************************************
-    def synchr_averaging(self, tacho_attrname, N_interp, N_periods, max_Nt,
-                         phase_shift=None):
-        """
-        Performs synchronous averaging of pressure signals over rotor angle
-        domain. Uses 'N_interp' points per rotor revolution
-        """
-        
+    def extract_rotor_angle(self, tacho_attrname):
         assert self.is_rotor is True,\
             "'SingleFileTimeSeries' instance attribute 'is_rotor' is false - can't perform synchronous averaging!"
         
@@ -643,8 +635,21 @@ class SingleFileTimeSeries:
         filter_order = 3
         
         # instantaneous rotor angle in time domain
-        angle_t = AR.extract_rotor_angle(tacho, self.fs, f_low, f_high,
+        self.angle_t = AR.extract_rotor_angle(tacho, self.fs, f_low, f_high,
                                               filter_order)
+        
+        return self.angle_t
+        
+
+    # *************************************************************************
+    def synchr_averaging(self, tacho_attrname, N_interp, N_periods, max_Nt,
+                         phase_shift=None):
+        """
+        Performs synchronous averaging of pressure signals over rotor angle
+        domain. Uses 'N_interp' points per rotor revolution
+        """
+        
+        angle_t = self.extract_rotor_angle(tacho_attrname)
         
         # apply phase shift to rotor angle (change theta=0 reference point)
         if phase_shift:
