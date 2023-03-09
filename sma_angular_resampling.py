@@ -246,7 +246,7 @@ def angular_resampling(signals, rotor_angle, N_interp, ignore_last_cycle=True):
     return angular_signals, angle_signal
 
 
-def synch_averaging(signals, N_per_cycle, N_periods):
+def synchr_averaging(signals, N_per_cycle, N_periods):
     """
     Performs synchronous averaging of an input 'signals' containing 
     multichannel, resampled signals with exactly 'N_per_cycle' samples per
