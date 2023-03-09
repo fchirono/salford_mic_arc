@@ -21,9 +21,9 @@ import scipy.signal as ss
 import scipy.interpolate as si
 
 
-# **********************************************************************
+# #############################################################################
 # %% Functions to process rotor angle from tacho signal
-# **********************************************************************
+# #############################################################################
 
 def extract_rotor_angle(tacho_data, fs, f_low, f_high, filter_order):
     """
@@ -79,6 +79,7 @@ def extract_rotor_angle(tacho_data, fs, f_low, f_high, filter_order):
     return rotor_angle
 
 
+# #############################################################################
 def shift_rotor_angle(rotor_angle, phase_shift, angle_units='deg'):
     """
     Applies a phase shift to a rotor angle variable. Input 'rotor_angle' should
@@ -110,6 +111,7 @@ def shift_rotor_angle(rotor_angle, phase_shift, angle_units='deg'):
     return rotor_angle_shifted
     
 
+# #############################################################################
 def extract_rotor_zeros(rotor_angle):
     """
     Returns a list of indices of where the rotor angular angle time series
@@ -135,6 +137,7 @@ def extract_rotor_zeros(rotor_angle):
     return phase_zeros
 
 
+# #############################################################################
 def extract_rotor_freq(rotor_angle, fs):
     """
     Estimates rotor instantaneous rotational frequency, in Hz, from rotor angle
@@ -162,6 +165,7 @@ def extract_rotor_freq(rotor_angle, fs):
     return inst_freq
 
 
+# #############################################################################
 def angular_resampling(signals, rotor_angle, N_interp, ignore_last_cycle=True):
     """
     Resamples time-domain signals to rotor angle domain, so output signal
@@ -246,6 +250,7 @@ def angular_resampling(signals, rotor_angle, N_interp, ignore_last_cycle=True):
     return angular_signals, angle_signal
 
 
+# #############################################################################
 def synchr_averaging(signals, N_per_cycle, N_periods):
     """
     Performs synchronous averaging of an input 'signals' containing 
