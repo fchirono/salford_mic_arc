@@ -676,7 +676,7 @@ class SingleFileTimeSeries:
         # and residue
         p_mean_rlocked, p_res_rlocked = AR.synchr_averaging(p_rlocked, N_interp, N_periods)
     
-        return p_mean_rlocked, p_res_rlocked, angle_t, fs_rlocked
+        return p_mean_rlocked, p_res_rlocked, angle_t, angle_rlocked, fs_rlocked
 
 
 # #############################################################################
