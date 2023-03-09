@@ -17,6 +17,7 @@ import numpy as np
 import soundfile as sf
 import scipy.signal as ss
 
+import salford_mic_arc.sma_angular_resampling as AR
 
 from salford_mic_arc.sma_consts_aux import P_REF, DEFAULT_NDFT, DEFAULT_NOVERLAP, \
     DEFAULT_WINDOW, _calc_centroid, _round_to_nearest_odd
@@ -616,6 +617,61 @@ class SingleFileTimeSeries:
         sf.write(wav_filename, self.mic_data[ch_list].T, self.fs,
                  subtype)
         # *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+
+        
+
+    # *************************************************************************
+    def synchr_averaging(self, tacho_attrname, N_interp, N_periods, max_Nt,
+                         phase_shift=None):
+        """
+        Performs synchronous averaging of pressure signals over rotor angle
+        domain. Uses 'N_interp' points per rotor revolution
+        """
+        
+        assert self.is_rotor is True,\
+            "'SingleFileTimeSeries' instance attribute 'is_rotor' is false - can't perform synchronous averaging!"
+        
+        assert hasattr(self, tacho_attrname), \
+            f"'SingleFileTimeSeries' instance does not have attribute '{tacho_attrname}'!"
+        
+        tacho = getattr(self, tacho_attrname)
+    
+        # extract rotor angle from tachometer signal
+        f_low = 0.8*self.f_shaft
+        f_high = 1.2*self.f_shaft
+        filter_order = 3
+        
+        # instantaneous rotor angle in time domain
+        angle_t = AR.extract_rotor_angle(tacho, self.fs, f_low, f_high,
+                                              filter_order)
+        
+        # apply phase shift to rotor angle (change theta=0 reference point)
+        if phase_shift:
+            angle_t = AR.shift_rotor_angle(angle_t, phase_shift)
+    
+        # Performs angular resampling of acoustic signal
+        p_rlocked, angle_rlocked = AR.angular_resampling(self.mic_data[:, :max_Nt],
+                                                         angle_t[:max_Nt],
+                                                         N_interp)
+
+        # # estimate rotor instantaneous frequency excluding 0.5s at beginning/end
+        # t_valid = (self.t>0.5) & (self.t<self.T-0.5)
+        # rotor_freq = AR.extract_rotor_freq(angle_t[t_valid], self.fs)
+        # mean_fshaft = np.mean(rotor_freq)
+
+        # # estimate rotor-locked sampling freq
+        # T_shaft = 1/mean_fshaft
+        # fs_rlocked = N_interp/T_shaft
+        
+        T_shaft = 1/self.f_shaft
+        fs_rlocked = N_interp/T_shaft
+    
+        # decompose rotor-locked signals into mean (averaged over 'N_periods')
+        # and residue
+        p_mean_rlocked, p_res_rlocked = AR.synchr_averaging(p_rlocked, N_interp, N_periods)
+    
+        return p_mean_rlocked, p_res_rlocked, angle_t, fs_rlocked
 
 
 # #############################################################################
