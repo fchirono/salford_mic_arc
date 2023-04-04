@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Functions to implement angular resampling of noise from rotating machines. Uses
-a tachometer signal (e.g. 1/rev pulse) as reference for the rotor position, and
-resamples the acoustic signals with an integer number of samples per rotor 
-rotation.
+Functions to implement angular resampling and synchronous averaging of signals
+from rotating machines.
+
+This module uses a tachometer signal (e.g. 1/rev pulse) as reference for the
+rotor angular position, and resamples the signals with an integer number of
+samples per rotor cycle. The synchronous averaging function averages the
+signals over one or more rotor cycles, and returns the mean (i.e. tonal) and
+residue (i.e. broadband) signal components.
 
 Recommended import syntax:
 
@@ -21,9 +25,9 @@ import scipy.signal as ss
 import scipy.interpolate as si
 
 
-# **********************************************************************
+# #############################################################################
 # %% Functions to process rotor angle from tacho signal
-# **********************************************************************
+# #############################################################################
 
 def extract_rotor_angle(tacho_data, fs, f_low, f_high, filter_order):
     """
@@ -33,9 +37,9 @@ def extract_rotor_angle(tacho_data, fs, f_low, f_high, filter_order):
 
     The tacho signal is bandpassed around its fundamental frequency using
     forward-backwards filtering with a Butterworth filter, where 'f_low',
-    'f_high', and 'filter_order' are the filter parameters. The phase of
-    this narrowband signal (i.e. the rotor angular position) is estimated
-    using the Hilbert Transform.
+    'f_high', and 'filter_order' are the filter parameters. The instantaneous 
+    phase of this narrowband signal represents the rotor angular position, and
+    is estimated from the analytic signal using the Hilbert Transform.
 
     Parameters
     ----------
@@ -59,6 +63,13 @@ def extract_rotor_angle(tacho_data, fs, f_low, f_high, filter_order):
     angle : (N_t,)-shape array_like
         Numpy array containing the rotor angular position time series,
         between 0 and 2*pi rad.
+    
+    Notes
+    -----
+    Suggested values for the bandpass filter are:
+        f_low = 0.8 * f_rotor
+        f_high = 1.2 * f_rotor
+        filter_order = 3
     """
 
     # create bandpass filter to extract fundamental frequency
@@ -79,6 +90,7 @@ def extract_rotor_angle(tacho_data, fs, f_low, f_high, filter_order):
     return rotor_angle
 
 
+# #############################################################################
 def shift_rotor_angle(rotor_angle, phase_shift, angle_units='deg'):
     """
     Applies a phase shift to a rotor angle variable. Input 'rotor_angle' should
@@ -110,9 +122,10 @@ def shift_rotor_angle(rotor_angle, phase_shift, angle_units='deg'):
     return rotor_angle_shifted
     
 
+# #############################################################################
 def extract_rotor_zeros(rotor_angle):
     """
-    Returns a list of indices of where the rotor angular angle time series
+    Returns a list of indices of where the rotor angle time series
     reaches 0 deg.
 
     This function explores the fact that the periodic transitions between
@@ -135,6 +148,7 @@ def extract_rotor_zeros(rotor_angle):
     return phase_zeros
 
 
+# #############################################################################
 def extract_rotor_freq(rotor_angle, fs):
     """
     Estimates rotor instantaneous rotational frequency, in Hz, from rotor angle
@@ -162,27 +176,30 @@ def extract_rotor_freq(rotor_angle, fs):
     return inst_freq
 
 
+# #############################################################################
 def angular_resampling(signals, rotor_angle, N_interp, ignore_last_cycle=True):
     """
     Resamples time-domain signals to rotor angle domain, so output signal
     samples are locked with rotor angular position and have 'N_interp' samples
-    per rotor cycle exactly.
-
-    Returns 'angular_signals' and 'angle_signal', containing 'N_cycles'
-    equally-sampled full rotor cycles.
+    per rotor period exactly. Returns 'angular_signals' and 'angle_signal',
+    containing 'N_cycles' equally-sampled full rotor periods.
+    
+    'N_cycles' is determined from the number of integer rotor cycles present
+    in the original input signal.
 
     Parameters
     ----------
     signals : (N_ch, N_t)-shape array_like
         Numpy array containing all 'N_ch' signals in time-domain to be
-        resampled.
+        resampled
 
     rotor_angle : (N_t,)-shape array_like
-        Numpy array containing the rotor angle signal, between 0 and 2*pi rads
+        Numpy array containing the rotor angle signal in time-domain, between
+        0 and 2*pi rads
 
     N_interp : int
-        Number of samples to use in interpolation (per cycle)
-    
+        Number of samples per rotor period to use in interpolation
+        
     ignore_last_cycle : boolean, optional
         Flag to determine whether to ignore last full cycle, as it might be 
         corrupted. Default is True
@@ -216,8 +233,8 @@ def angular_resampling(signals, rotor_angle, N_interp, ignore_last_cycle=True):
     # interpolate each cycle (plus safety buffer of 10 samples on each side)
     # onto rotor angle 'theta'.
     
+    # Last full cycle may be corrupted
     if ignore_last_cycle:
-        # Last full cycle may be corrupted
         N_cycles -= 1
         
     angular_signals = np.zeros((N_ch, N_cycles*N_interp))
@@ -246,12 +263,14 @@ def angular_resampling(signals, rotor_angle, N_interp, ignore_last_cycle=True):
     return angular_signals, angle_signal
 
 
+# #############################################################################
 def synchr_averaging(signals, N_per_cycle, N_periods):
     """
     Performs synchronous averaging of an input 'signals' containing 
     multichannel, resampled signals with exactly 'N_per_cycle' samples per
-    period. Outputs are the mean, synchronously-averaged signal calculated over
-    one full period, and the residue signal (after subtracting the mean).
+    rotor cycle. Outputs are the mean (synchronously-averaged) signal
+    calculated over 'N_periods' full periods, and the residue signal after
+    subtracting the mean.
     
     Parameters
     ----------
@@ -277,9 +296,9 @@ def synchr_averaging(signals, N_per_cycle, N_periods):
     N_ch, N_t = signals.shape
     
     # zero-pad signals if necessary
-    N_zero_pad = N_t%(N_periods*N_per_cycle)
-    if N_zero_pad != 0:
-        zero_padding = np.zeros((N_ch, N_zero_pad))
+    remainder = N_t%(N_periods*N_per_cycle)
+    if remainder != 0:
+        zero_padding = np.zeros((N_ch, (N_periods*N_per_cycle)-remainder))
         signals = np.concatenate((signals, zero_padding), axis=1)
     
     signals_period = signals.reshape((N_ch, N_periods*N_per_cycle, -1),
