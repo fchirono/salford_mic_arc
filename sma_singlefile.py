@@ -660,15 +660,7 @@ class SingleFileTimeSeries:
                                                          angle_t[:max_Nt],
                                                          N_interp)
 
-        # # estimate rotor instantaneous frequency excluding 0.5s at beginning/end
-        # t_valid = (self.t>0.5) & (self.t<self.T-0.5)
-        # rotor_freq = AR.extract_rotor_freq(angle_t[t_valid], self.fs)
-        # mean_fshaft = np.mean(rotor_freq)
-
-        # # estimate rotor-locked sampling freq
-        # T_shaft = 1/mean_fshaft
-        # fs_rlocked = N_interp/T_shaft
-        
+        # estimate rotor-locked sampling freq
         T_shaft = 1/self.f_shaft
         fs_rlocked = N_interp/T_shaft
     
