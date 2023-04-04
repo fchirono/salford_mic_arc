@@ -63,6 +63,13 @@ def extract_rotor_angle(tacho_data, fs, f_low, f_high, filter_order):
     angle : (N_t,)-shape array_like
         Numpy array containing the rotor angular position time series,
         between 0 and 2*pi rad.
+    
+    Notes
+    -----
+    Suggested values for the bandpass filter are:
+        f_low = 0.8 * f_rotor
+        f_high = 1.2 * f_rotor
+        filter_order = 3
     """
 
     # create bandpass filter to extract fundamental frequency
